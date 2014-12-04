@@ -15,7 +15,9 @@ This new extension is built around bindless GPU pointers/handles and three more 
  - To get an idea what is currently possible check the **nvtoken.cpp/hpp** files, which also showcases how the tokenstream could be decoded into classic OpenGL calls.
 
 ```cpp
-// For example a ubo binding token looks like this (tightly-packed structs, the most common tokens are 16 bytes)
+// The tokens are tightly-packed structs and most common tokens are 16 bytes.
+// Below you will find the token definition to update a UBO binding. Compared 
+// to standard UBOs, tokens update the binding per stage.
 
 TokenUbo
 {
@@ -56,7 +58,7 @@ The output should look something like this:
   Timer Blit;    GL     59; CPU     54; (microseconds, avg 758)
   Timer TwDraw;  GL    389; CPU    551; (microseconds, avg 758)
 ``` 
-Here some preliminary example results on a win7-64, i7-860, Quadro K5000 system
+Here some preliminary example results for *Timer Draw* on a win7-64, i7-860, Quadro K5000 system
 
 draw mode | GPU time | CPU time (microseconds)
 ------------ | ------------- | -------------
@@ -91,35 +93,35 @@ As well as initialization and state update functions:
  - Sample::initCommandList()
  - Sample::updateCommandListState()
 
-The emulation layer allows to roughly see how the glDrawCommands* and glStateCapture work internally, and also aids debugging as the tokens are never error-checked. Customizing this emulation may also be useful as permanent compatibility layer for driver/hardware combinations which do not run the extension natively.
+The emulation layer allows to roughly get an idea how the glDrawCommands* and glStateCapture work internally, and also aids debugging as the tokens are never error-checked. Customizing this emulation may also be useful as permanent compatibility layer for driver/hardware combinations which do not run the extension natively.
 
 ![sample screenshot](https://github.com/nvpro-samples/gl_commandlist_basic/blob/master/doc/sample.jpg)
 
 #### Related Samples
 The extension is also used in the **gl commandlist bk3d models** and **gl cadscene rendertechniques** samples. The latter sample includes token-buffer-based occlusion culling and token-streaming techniques on real-world scenes.
 
-
->    Copyright (c) 2014, NVIDIA CORPORATION. All rights reserved.
-> 
->    Redistribution and use in source and binary forms, with or without
->    modification, are permitted provided that the following conditions
->    are met:
->     * Redistributions of source code must retain the above copyright
->       notice, this list of conditions and the following disclaimer.
->     * Neither the name of NVIDIA CORPORATION nor the names of its
->       contributors may be used to endorse or promote products derived
->       from this software without specific prior written permission.
-> 
->    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ``AS IS'' AND ANY
->    EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
->    IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
->    PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR
->    CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
->    EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
->    PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
->    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
->    OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
->    (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
->    OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
+```
+    Copyright (c) 2014, NVIDIA CORPORATION. All rights reserved.
+ 
+    Redistribution and use in source and binary forms, with or without
+    modification, are permitted provided that the following conditions
+    are met:
+     * Redistributions of source code must retain the above copyright
+       notice, this list of conditions and the following disclaimer.
+     * Neither the name of NVIDIA CORPORATION nor the names of its
+       contributors may be used to endorse or promote products derived
+       from this software without specific prior written permission.
+ 
+    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ``AS IS'' AND ANY
+    EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+    IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+    PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+    CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+    EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+    PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
+    OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+    (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+    OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+```
 
