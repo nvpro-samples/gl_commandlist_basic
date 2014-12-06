@@ -97,8 +97,11 @@ The emulation layer allows to roughly get an idea how the glDrawCommands* and gl
 
 ![sample screenshot](https://github.com/nvpro-samples/gl_commandlist_basic/blob/master/doc/sample.jpg)
 
+#### Building
+Ideally clone this and other interesting [nvpro-samples](https://github.com/nvpro-samples) repositories into a common subdirectory. You will always need [shared_sources](https://github.com/nvpro-samples/shared_sources) and on Windows [shared_external](https://github.com/nvpro-samples/shared_external). The shared directories are searched either as subdirectory of the sample or one directory up. It is recommended to use the [build_all](https://github.com/nvpro-samples/build_all) cmake as entry point, it will also give you options to enable/disable individual samples when creating the solutions.
+
 #### Related Samples
-The extension is also used in the **gl commandlist bk3d models** and **gl cadscene rendertechniques** samples. The latter sample includes token-buffer-based occlusion culling and token-streaming techniques on real-world scenes.
+The extension is also used in the [gl commandlist bk3d models](https://github.com/nvpro-samples/gl_commandlist_bk3d_models), [gl occlusion culling](https://github.com/nvpro-samples/gl_occlusion_culling) and [gl cadscene rendertechniques](https://github.com/nvpro-samples/gl_cadscene_rendertechniques) samples. The latter two samples include token-buffer-based occlusion culling and the last also token-streaming techniques on real-world scenes.
 
 ```
     Copyright (c) 2014, NVIDIA CORPORATION. All rights reserved.
