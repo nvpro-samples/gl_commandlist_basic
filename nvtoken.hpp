@@ -29,9 +29,42 @@
 #include <string>
 #include <vector>
 
+#define NVTOKEN_STATESYSTEM 1
+
+#include "platform.h"
 #include "nvcommandlist.h"
+#if NVTOKEN_STATESYSTEM
 // not needed if emulation is not used, or implemented differently
 #include "statesystem.hpp"
+#else
+namespace StateSystem {
+  // Minimal emulation layer
+  enum Faces {
+    FACE_FRONT,
+    FACE_BACK,
+    MAX_FACES,
+  };
+  struct State {
+    struct {
+      struct {
+        GLsizei stride;
+      }bindings[16];
+    }vertexformat;
+
+    struct {
+      GLenum mode;
+    }alpha;
+
+    struct {
+      struct {
+        GLenum func;
+        GLuint mask;
+      }funcs[MAX_FACES];
+    }stencil;
+  };
+}
+#endif
+
 
 namespace nvtoken
 {
@@ -61,7 +94,7 @@ namespace nvtoken
     size_t          m_max;
     unsigned char*  m_begin;
     unsigned char*  m_end;
-    unsigned char* __restrict m_cur;
+    unsigned char* NVP_RESTRICT m_cur;
 
     void init(void* data, size_t size)
     {
@@ -516,32 +549,41 @@ namespace nvtoken
   template <class T>
   size_t nvtokenEnqueue(std::string& queue, T& data)
   {
+    size_t offset = queue.size();
     std::string cmd = std::string((const char*)&data,sizeof(T));
 
     queue += cmd;
 
-    return sizeof(T);
+    return offset;
   }
 
   template <class T>
   size_t nvtokenEnqueue(NVPointerStream& queue, T& data)
   {
     assert(queue.m_cur + sizeof(T) <= queue.m_end);
+    size_t offset = queue.m_cur - queue.m_begin;
 
     memcpy(queue.m_cur,&data,sizeof(T));
     queue.m_cur += sizeof(T);
 
-    return sizeof(T);
+    return offset;
   }
   
   //////////////////////////////////////////////////////////
   
   void        nvtokenInitInternals( bool hwsupport, bool bindlessSupport);
   const char* nvtokenCommandToString( GLenum type );
-  void        nvtokenGetStats( const void* __restrict stream, size_t streamSize, int stats[NVTOKEN_TYPES]);
+  void        nvtokenGetStats( const void* NVP_RESTRICT stream, size_t streamSize, int stats[NVTOKEN_TYPES]);
 
-  void nvtokenDrawCommandsStatesSW(const void* __restrict stream, size_t streamSize, 
-    const GLintptr* __restrict offsets, const GLsizei* __restrict sizes, 
-    const GLuint* __restrict states, const GLuint* __restrict fbos, GLuint count, 
+  void nvtokenDrawCommandsSW(GLenum mode, const void* NVP_RESTRICT stream, size_t streamSize, 
+    const GLintptr* NVP_RESTRICT offsets, const GLsizei* NVP_RESTRICT sizes, 
+    GLuint count, 
+    StateSystem::State &state);
+
+#if NVTOKEN_STATESYSTEM
+  void nvtokenDrawCommandsStatesSW(const void* NVP_RESTRICT stream, size_t streamSize, 
+    const GLintptr* NVP_RESTRICT offsets, const GLsizei* NVP_RESTRICT sizes, 
+    const GLuint* NVP_RESTRICT states, const GLuint* NVP_RESTRICT fbos, GLuint count, 
     StateSystem &stateSystem);
+#endif
 }

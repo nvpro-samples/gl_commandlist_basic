@@ -146,9 +146,9 @@ namespace nvtoken
   //////////////////////////////////////////////////////////////////////////
 
 
-  void nvtokenGetStats( const void* __restrict stream, size_t streamSize, int stats[NVTOKEN_TYPES] )
+  void nvtokenGetStats( const void* NVP_RESTRICT stream, size_t streamSize, int stats[NVTOKEN_TYPES] )
   {
-    const GLubyte* __restrict current = (GLubyte*)stream;
+    const GLubyte* NVP_RESTRICT current = (GLubyte*)stream;
     const GLubyte* streamEnd = current + streamSize;
 
     while (current < streamEnd){
@@ -165,9 +165,9 @@ namespace nvtoken
 
   // Emulation related
 
-  static GLenum nvtokenDrawCommandsSW( const void* __restrict stream, size_t streamSize, GLenum mode, GLenum type, const StateSystem::State& state ) 
+  static __forceinline GLenum nvtokenDrawCommandSequenceSW( const void* NVP_RESTRICT stream, size_t streamSize, GLenum mode, GLenum type, const StateSystem::State& state ) 
   {
-    const GLubyte* __restrict current = (GLubyte*)stream;
+    const GLubyte* NVP_RESTRICT current = (GLubyte*)stream;
     const GLubyte* streamEnd = current + streamSize;
 
     GLenum modeStrip;
@@ -342,13 +342,33 @@ namespace nvtoken
     return type;
   }
 
-  void nvtokenDrawCommandsStatesSW(const void* __restrict stream, size_t streamSize, 
-    const GLintptr* __restrict offsets, const GLsizei* __restrict sizes, 
-    const GLuint* __restrict states, const GLuint* __restrict fbos, GLuint count, 
+  void nvtokenDrawCommandsSW(GLenum mode, const void* NVP_RESTRICT stream, size_t streamSize, 
+    const GLintptr* NVP_RESTRICT offsets, const GLsizei* NVP_RESTRICT sizes, 
+    GLuint count, 
+    StateSystem::State &state)
+  {
+    const char* NVP_RESTRICT tokens = (const char*)stream;
+    GLenum type = GL_UNSIGNED_SHORT;
+    for (GLuint i = 0; i < count; i++)
+    {
+      size_t offset = offsets[i];
+      size_t size   = sizes[i];
+
+      assert(size + offset <= streamSize);
+
+      type = nvtokenDrawCommandSequenceSW(&tokens[offset], size, mode, type, state);
+    }
+
+  }
+
+#if NVTOKEN_STATESYSTEM
+  void nvtokenDrawCommandsStatesSW(const void* NVP_RESTRICT stream, size_t streamSize, 
+    const GLintptr* NVP_RESTRICT offsets, const GLsizei* NVP_RESTRICT sizes, 
+    const GLuint* NVP_RESTRICT states, const GLuint* NVP_RESTRICT fbos, GLuint count, 
     StateSystem &stateSystem)
   {
     int lastFbo = ~0;
-    const char* __restrict tokens = (const char*)stream;
+    const char* NVP_RESTRICT tokens = (const char*)stream;
 
     StateSystem::StateID lastID;
 
@@ -387,7 +407,8 @@ namespace nvtoken
 
       assert(size + offset <= streamSize);
 
-      type = nvtokenDrawCommandsSW(&tokens[offset], size, mode, type, state);
+      type = nvtokenDrawCommandSequenceSW(&tokens[offset], size, mode, type, state);
     }
   }
+#endif
 }

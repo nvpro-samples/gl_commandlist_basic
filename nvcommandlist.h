@@ -169,8 +169,8 @@ typedef void (GLEXT_APIENTRY *PFNGLCREATESTATESNVPROC)(GLsizei n, GLuint *states
 typedef void (GLEXT_APIENTRY *PFNGLDELETESTATESNVPROC)(GLsizei n, const GLuint *states);
 typedef GLboolean (*PFNGLISSTATENVPROC)(GLuint state);
 typedef void (GLEXT_APIENTRY *PFNGLSTATECAPTURENVPROC)(GLuint state, GLenum mode);
-typedef void (GLEXT_APIENTRY *PFNGLDRAWCOMMANDSNVPROC)(GLuint buffer, const GLintptr* indirects, const GLsizei* sizes, GLuint count);
-typedef void (GLEXT_APIENTRY *PFNGLDRAWCOMMANDSADDRESSNVPROC)(const GLuint64* indirects, const GLsizei* sizes, GLuint count);
+typedef void (GLEXT_APIENTRY *PFNGLDRAWCOMMANDSNVPROC)(GLenum mode, GLuint buffer, const GLintptr* indirects, const GLsizei* sizes, GLuint count);
+typedef void (GLEXT_APIENTRY *PFNGLDRAWCOMMANDSADDRESSNVPROC)(GLenum mode, const GLuint64* indirects, const GLsizei* sizes, GLuint count);
 typedef void (GLEXT_APIENTRY *PFNGLDRAWCOMMANDSSTATESNVPROC)(GLuint buffer, const GLintptr* indirects, const GLsizei* sizes, 
   const GLuint* states, const GLuint* fbos, GLuint count);
 typedef void (GLEXT_APIENTRY *PFNGLDRAWCOMMANDSSTATESADDRESSNVPROC)(const GLuint64* indirects, const GLsizei* sizes, 
@@ -186,97 +186,97 @@ typedef void (GLEXT_APIENTRY *PFNGLCALLCOMMANDLISTNVPROC)(GLuint list);
 typedef GLuint (GLEXT_APIENTRY *PFNGLGETCOMMANDHEADERNVPROC)(GLenum id, GLuint tokenSize);
 typedef GLushort(GLEXT_APIENTRY* PFNGLGETSTAGEINDEXNVPROC)(GLenum shadertype);
 
-extern PFNGLCREATESTATESNVPROC __glewCreateStatesNV;
+extern PFNGLCREATESTATESNVPROC __nvcCreateStatesNV;
 inline void glCreateStatesNV(GLsizei n, GLuint *states)
 {
-  __glewCreateStatesNV(n,states);
+  __nvcCreateStatesNV(n,states);
 }
-extern PFNGLDELETESTATESNVPROC __glewDeleteStatesNV;
+extern PFNGLDELETESTATESNVPROC __nvcDeleteStatesNV;
 inline void glDeleteStatesNV(GLsizei n, const GLuint *states)
 {
-  __glewDeleteStatesNV(n,states);
+  __nvcDeleteStatesNV(n,states);
 }
-extern PFNGLISSTATENVPROC __glewIsStateNV;
+extern PFNGLISSTATENVPROC __nvcIsStateNV;
 inline GLboolean glIsStateNV(GLuint state)
 {
-  return __glewIsStateNV(state);
+  return __nvcIsStateNV(state);
 }
-extern PFNGLSTATECAPTURENVPROC __glewStateCaptureNV;
+extern PFNGLSTATECAPTURENVPROC __nvcStateCaptureNV;
 inline void glStateCaptureNV(GLuint state, GLenum mode)
 {
-  __glewStateCaptureNV(state,mode);
+  __nvcStateCaptureNV(state,mode);
 }
-extern PFNGLDRAWCOMMANDSNVPROC __glewDrawCommandsNV;
-inline void glDrawCommandsNV(GLuint buffer, const GLintptr* indirects, const GLsizei* sizes, GLuint count)
+extern PFNGLDRAWCOMMANDSNVPROC __nvcDrawCommandsNV;
+inline void glDrawCommandsNV(GLenum mode, GLuint buffer, const GLintptr* indirects, const GLsizei* sizes, GLuint count)
 {
-  __glewDrawCommandsNV(buffer,indirects,sizes,count);
+  __nvcDrawCommandsNV(mode,buffer,indirects,sizes,count);
 }
-extern PFNGLDRAWCOMMANDSADDRESSNVPROC __glewDrawCommandsAddressNV;
-inline void glDrawCommandsAddressNV(const GLuint64* indirects, const GLsizei* sizes, GLuint count)
+extern PFNGLDRAWCOMMANDSADDRESSNVPROC __nvcDrawCommandsAddressNV;
+inline void glDrawCommandsAddressNV(GLenum mode, const GLuint64* indirects, const GLsizei* sizes, GLuint count)
 {
-  __glewDrawCommandsAddressNV(indirects,sizes,count);
+  __nvcDrawCommandsAddressNV(mode,indirects,sizes,count);
 }
-extern PFNGLDRAWCOMMANDSSTATESNVPROC __glewDrawCommandsStatesNV;
+extern PFNGLDRAWCOMMANDSSTATESNVPROC __nvcDrawCommandsStatesNV;
 inline void glDrawCommandsStatesNV(GLuint buffer, const GLintptr* indirects, const GLsizei* sizes, 
   const GLuint* states, const GLuint* fbos, GLuint count)
 {
-  __glewDrawCommandsStatesNV(buffer,indirects,sizes,states,fbos,count);
+  __nvcDrawCommandsStatesNV(buffer,indirects,sizes,states,fbos,count);
 }
-extern PFNGLDRAWCOMMANDSSTATESADDRESSNVPROC __glewDrawCommandsStatesAddressNV;
+extern PFNGLDRAWCOMMANDSSTATESADDRESSNVPROC __nvcDrawCommandsStatesAddressNV;
 inline void glDrawCommandsStatesAddressNV(const GLuint64* indirects, const GLsizei* sizes, 
   const GLuint* states, const GLuint* fbos, GLuint count)
 {
-  __glewDrawCommandsStatesAddressNV(indirects,sizes,states,fbos,count);
+  __nvcDrawCommandsStatesAddressNV(indirects,sizes,states,fbos,count);
 }
-extern PFNGLCREATECOMMANDLISTSNVPROC __glewCreateCommandListsNV;
+extern PFNGLCREATECOMMANDLISTSNVPROC __nvcCreateCommandListsNV;
 inline void glCreateCommandListsNV(GLsizei n, GLuint *lists)
 {
-  __glewCreateCommandListsNV(n,lists);
+  __nvcCreateCommandListsNV(n,lists);
 }
-extern PFNGLDELETECOMMANDLISTSNVPROC __glewDeleteCommandListsNV;
+extern PFNGLDELETECOMMANDLISTSNVPROC __nvcDeleteCommandListsNV;
 inline void glDeleteCommandListsNV(GLsizei n, const GLuint *lists)
 {
-  __glewDeleteCommandListsNV(n,lists);
+  __nvcDeleteCommandListsNV(n,lists);
 }
-extern PFNGLISCOMMANDLISTNVPROC __glewIsCommandListNV;
+extern PFNGLISCOMMANDLISTNVPROC __nvcIsCommandListNV;
 inline GLboolean glIsCommandListNV(GLuint list)
 {
-  return __glewIsCommandListNV(list);
+  return __nvcIsCommandListNV(list);
 }
-extern PFNGLLISTDRAWCOMMANDSSTATESCLIENTNVPROC __glewListDrawCommandsStatesClientNV;
+extern PFNGLLISTDRAWCOMMANDSSTATESCLIENTNVPROC __nvcListDrawCommandsStatesClientNV;
 inline void glListDrawCommandsStatesClientNV(GLuint list, GLuint segment, const void** indirects, 
   const GLsizei* sizes, const GLuint* states, const GLuint* fbos, GLuint count)
 {
-  __glewListDrawCommandsStatesClientNV(list,segment,indirects,sizes,states,fbos,count);
+  __nvcListDrawCommandsStatesClientNV(list,segment,indirects,sizes,states,fbos,count);
 }
-extern PFNGLCOMMANDLISTSEGMENTSNVPROC __glewCommandListSegmentsNV;
+extern PFNGLCOMMANDLISTSEGMENTSNVPROC __nvcCommandListSegmentsNV;
 inline void glCommandListSegmentsNV(GLuint list, GLuint segments)
 {
-  __glewCommandListSegmentsNV(list,segments);
+  __nvcCommandListSegmentsNV(list,segments);
 }
-extern PFNGLCOMPILECOMMANDLISTNVPROC __glewCompileCommandListNV;
+extern PFNGLCOMPILECOMMANDLISTNVPROC __nvcCompileCommandListNV;
 inline void glCompileCommandListNV(GLuint list)
 {
-  __glewCompileCommandListNV(list);
+  __nvcCompileCommandListNV(list);
 }
-extern PFNGLCALLCOMMANDLISTNVPROC __glewCallCommandListNV;
+extern PFNGLCALLCOMMANDLISTNVPROC __nvcCallCommandListNV;
 inline void glCallCommandListNV(GLuint list)
 {
-  __glewCallCommandListNV(list);
+  __nvcCallCommandListNV(list);
 }
-extern PFNGLGETCOMMANDHEADERNVPROC __glewGetCommandHeaderNV;
+extern PFNGLGETCOMMANDHEADERNVPROC __nvcGetCommandHeaderNV;
 inline GLuint glGetCommandHeaderNV(GLenum tokenId, GLuint tokenSize)
 {
-  return __glewGetCommandHeaderNV(tokenId,tokenSize);
+  return __nvcGetCommandHeaderNV(tokenId,tokenSize);
 }
-extern PFNGLGETSTAGEINDEXNVPROC __glewGetStageIndexNV;
+extern PFNGLGETSTAGEINDEXNVPROC __nvcGetStageIndexNV;
 inline GLushort glGetStageIndexNV(GLenum shadertype)
 {
-  return __glewGetStageIndexNV(shadertype);
+  return __nvcGetStageIndexNV(shadertype);
 }
 
-typedef void (*NVPROC)(void);
-int init_NV_command_list(NVPROC (*fnGetProc)(const char* name));
+typedef void (*NVCPROC)(void);
+int init_NV_command_list(NVCPROC (*fnGetProc)(const char* name));
 
 #endif
 

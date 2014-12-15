@@ -25,51 +25,51 @@
 
 #include "nvcommandlist.h"
 
-PFNGLCREATESTATESNVPROC __glewCreateStatesNV;
-PFNGLDELETESTATESNVPROC __glewDeleteStatesNV;
-PFNGLISSTATENVPROC __glewIsStateNV;
-PFNGLSTATECAPTURENVPROC __glewStateCaptureNV;
-PFNGLDRAWCOMMANDSNVPROC __glewDrawCommandsNV;
-PFNGLDRAWCOMMANDSADDRESSNVPROC __glewDrawCommandsAddressNV;
-PFNGLDRAWCOMMANDSSTATESNVPROC __glewDrawCommandsStatesNV;
-PFNGLDRAWCOMMANDSSTATESADDRESSNVPROC __glewDrawCommandsStatesAddressNV;
-PFNGLCREATECOMMANDLISTSNVPROC __glewCreateCommandListsNV;
-PFNGLDELETECOMMANDLISTSNVPROC __glewDeleteCommandListsNV;
-PFNGLISCOMMANDLISTNVPROC __glewIsCommandListNV;
-PFNGLLISTDRAWCOMMANDSSTATESCLIENTNVPROC __glewListDrawCommandsStatesClientNV;
-PFNGLCOMMANDLISTSEGMENTSNVPROC __glewCommandListSegmentsNV;
-PFNGLCOMPILECOMMANDLISTNVPROC __glewCompileCommandListNV;
-PFNGLCALLCOMMANDLISTNVPROC __glewCallCommandListNV;
-PFNGLGETCOMMANDHEADERNVPROC __glewGetCommandHeaderNV;
-PFNGLGETSTAGEINDEXNVPROC __glewGetStageIndexNV;
+PFNGLCREATESTATESNVPROC __nvcCreateStatesNV;
+PFNGLDELETESTATESNVPROC __nvcDeleteStatesNV;
+PFNGLISSTATENVPROC __nvcIsStateNV;
+PFNGLSTATECAPTURENVPROC __nvcStateCaptureNV;
+PFNGLDRAWCOMMANDSNVPROC __nvcDrawCommandsNV;
+PFNGLDRAWCOMMANDSADDRESSNVPROC __nvcDrawCommandsAddressNV;
+PFNGLDRAWCOMMANDSSTATESNVPROC __nvcDrawCommandsStatesNV;
+PFNGLDRAWCOMMANDSSTATESADDRESSNVPROC __nvcDrawCommandsStatesAddressNV;
+PFNGLCREATECOMMANDLISTSNVPROC __nvcCreateCommandListsNV;
+PFNGLDELETECOMMANDLISTSNVPROC __nvcDeleteCommandListsNV;
+PFNGLISCOMMANDLISTNVPROC __nvcIsCommandListNV;
+PFNGLLISTDRAWCOMMANDSSTATESCLIENTNVPROC __nvcListDrawCommandsStatesClientNV;
+PFNGLCOMMANDLISTSEGMENTSNVPROC __nvcCommandListSegmentsNV;
+PFNGLCOMPILECOMMANDLISTNVPROC __nvcCompileCommandListNV;
+PFNGLCALLCOMMANDLISTNVPROC __nvcCallCommandListNV;
+PFNGLGETCOMMANDHEADERNVPROC __nvcGetCommandHeaderNV;
+PFNGLGETSTAGEINDEXNVPROC __nvcGetStageIndexNV;
 
 
 static int initedNVcommandList = 0;
 
-int init_NV_command_list(NVPROC (*fnGetProc)(const char* name))
+int init_NV_command_list(NVCPROC (*fnGetProc)(const char* name))
 {
-  if (initedNVcommandList) return __glewCreateStatesNV != ((void*)0);
+  if (initedNVcommandList) return __nvcCreateStatesNV != ((void*)0);
 
-  __glewCreateStatesNV = (PFNGLCREATESTATESNVPROC)fnGetProc("glCreateStatesNV");
-  __glewDeleteStatesNV = (PFNGLDELETESTATESNVPROC)fnGetProc("glDeleteStatesNV");
-  __glewIsStateNV = (PFNGLISSTATENVPROC)fnGetProc("glIsStateNV");
-  __glewStateCaptureNV = (PFNGLSTATECAPTURENVPROC)fnGetProc("glStateCaptureNV");
-  __glewDrawCommandsNV = (PFNGLDRAWCOMMANDSNVPROC)fnGetProc("glDrawCommandsNV");
-  __glewDrawCommandsAddressNV = (PFNGLDRAWCOMMANDSADDRESSNVPROC)fnGetProc("glDrawCommandsAddressNV");
-  __glewDrawCommandsStatesNV = (PFNGLDRAWCOMMANDSSTATESNVPROC)fnGetProc("glDrawCommandsStatesNV");
-  __glewDrawCommandsStatesAddressNV = (PFNGLDRAWCOMMANDSSTATESADDRESSNVPROC)fnGetProc("glDrawCommandsStatesAddressNV");
-  __glewCreateCommandListsNV = (PFNGLCREATECOMMANDLISTSNVPROC)fnGetProc("glCreateCommandListsNV");
-  __glewDeleteCommandListsNV = (PFNGLDELETECOMMANDLISTSNVPROC)fnGetProc("glDeleteCommandListsNV");
-  __glewIsCommandListNV = (PFNGLISCOMMANDLISTNVPROC)fnGetProc("glIsCommandListNV");
-  __glewListDrawCommandsStatesClientNV = (PFNGLLISTDRAWCOMMANDSSTATESCLIENTNVPROC)fnGetProc("glListDrawCommandsStatesClientNV");
-  __glewCommandListSegmentsNV = (PFNGLCOMMANDLISTSEGMENTSNVPROC)fnGetProc("glCommandListSegmentsNV");
-  __glewCompileCommandListNV = (PFNGLCOMPILECOMMANDLISTNVPROC)fnGetProc("glCompileCommandListNV");
-  __glewCallCommandListNV = (PFNGLCALLCOMMANDLISTNVPROC)fnGetProc("glCallCommandListNV");
-  __glewGetCommandHeaderNV = (PFNGLGETCOMMANDHEADERNVPROC)fnGetProc("glGetCommandHeaderNV");
-  __glewGetStageIndexNV = (PFNGLGETSTAGEINDEXNVPROC)fnGetProc("glGetStageIndexNV");
+  __nvcCreateStatesNV = (PFNGLCREATESTATESNVPROC)fnGetProc("glCreateStatesNV");
+  __nvcDeleteStatesNV = (PFNGLDELETESTATESNVPROC)fnGetProc("glDeleteStatesNV");
+  __nvcIsStateNV = (PFNGLISSTATENVPROC)fnGetProc("glIsStateNV");
+  __nvcStateCaptureNV = (PFNGLSTATECAPTURENVPROC)fnGetProc("glStateCaptureNV");
+  __nvcDrawCommandsNV = (PFNGLDRAWCOMMANDSNVPROC)fnGetProc("glDrawCommandsNV");
+  __nvcDrawCommandsAddressNV = (PFNGLDRAWCOMMANDSADDRESSNVPROC)fnGetProc("glDrawCommandsAddressNV");
+  __nvcDrawCommandsStatesNV = (PFNGLDRAWCOMMANDSSTATESNVPROC)fnGetProc("glDrawCommandsStatesNV");
+  __nvcDrawCommandsStatesAddressNV = (PFNGLDRAWCOMMANDSSTATESADDRESSNVPROC)fnGetProc("glDrawCommandsStatesAddressNV");
+  __nvcCreateCommandListsNV = (PFNGLCREATECOMMANDLISTSNVPROC)fnGetProc("glCreateCommandListsNV");
+  __nvcDeleteCommandListsNV = (PFNGLDELETECOMMANDLISTSNVPROC)fnGetProc("glDeleteCommandListsNV");
+  __nvcIsCommandListNV = (PFNGLISCOMMANDLISTNVPROC)fnGetProc("glIsCommandListNV");
+  __nvcListDrawCommandsStatesClientNV = (PFNGLLISTDRAWCOMMANDSSTATESCLIENTNVPROC)fnGetProc("glListDrawCommandsStatesClientNV");
+  __nvcCommandListSegmentsNV = (PFNGLCOMMANDLISTSEGMENTSNVPROC)fnGetProc("glCommandListSegmentsNV");
+  __nvcCompileCommandListNV = (PFNGLCOMPILECOMMANDLISTNVPROC)fnGetProc("glCompileCommandListNV");
+  __nvcCallCommandListNV = (PFNGLCALLCOMMANDLISTNVPROC)fnGetProc("glCallCommandListNV");
+  __nvcGetCommandHeaderNV = (PFNGLGETCOMMANDHEADERNVPROC)fnGetProc("glGetCommandHeaderNV");
+  __nvcGetStageIndexNV = (PFNGLGETSTAGEINDEXNVPROC)fnGetProc("glGetStageIndexNV");
   
   initedNVcommandList = 1;
   
-  return __glewCreateStatesNV != ((void*)0);
+  return __nvcCreateStatesNV != ((void*)0);
 }
 
