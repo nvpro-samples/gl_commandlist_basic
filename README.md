@@ -2,7 +2,7 @@
 
 In this sample the **NV_command_list** extension is used to render a basic scene (variant of gl_simple_pipeline sample) and texturing is performed via **ARB_bindless_texture**.
 
-> **Note:** The NV_command_list extension is still work in progress and not exported in public drivers with its extension string. The sample showcases its current state, which may change, hence there is no official extension spec yet. Feedback is welcome and should be sent to Christoph Kubisch <ckubisch@nvidia.com>, Tristan Lorach <tlorach@nvidia.com> or Pierre Boudier <pboudier@nvidia.com>
+> **Note:** The NV_command_list extension is still work in progress and not exported in public drivers with its extension string, however the appropriate functions used in this sample may still be found in newer drivers (for example 347.09). The sample showcases its current state, which may change, hence there is no official extension spec yet. Feedback is welcome and should be sent to Christoph Kubisch <ckubisch@nvidia.com>, Tristan Lorach <tlorach@nvidia.com> or Pierre Boudier <pboudier@nvidia.com>
 
 This new extension is built around bindless GPU pointers/handles and three more technologies, which allow rendering scenes with many state changes and hundred thousands of drawcalls at extremely low CPU time:
 
