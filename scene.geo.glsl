@@ -21,12 +21,13 @@ out Interpolants {
 
 void main()
 {
+  const int numVertices = IN.length();
   vec3 avg = vec3(0);
-  for (int i = 0; i < IN.length; i++){
+  for (int i = 0; i < numVertices; i++){
     avg += IN[i].wPos;
   }
   
-  avg /= float(IN.length);
+  avg /= float(numVertices);
   
   bool useFaceNormal = fract(scene.time * 2.0) > 0.5;
   vec3 normal = vec3(0);
@@ -38,7 +39,7 @@ void main()
   
   float shrink = (cos(scene.time) * 0.5 + 0.5) * scene.shrinkFactor;
   
-  for (int i = 0; i < IN.length; i++){
+  for (int i = 0; i < numVertices; i++){
     vec3 wPos = mix(IN[i].wPos, avg, shrink);
     OUT.wPos = wPos;
     OUT.wNormal = useFaceNormal ? normal : IN[i].wNormal;

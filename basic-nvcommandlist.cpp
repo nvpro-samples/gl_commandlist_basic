@@ -57,6 +57,7 @@ namespace basiccmdlist
   int const SAMPLE_MINOR_VERSION(3);
 
 
+  static const int numObjects = 1024;
   static const int grid = 64;
   static const float globalscale = 8.0f;
 
@@ -379,9 +380,6 @@ namespace basiccmdlist
 
 
       // Scene objects
-
-      const int numObjects = 1024;
-      
       newBuffer(buffers.objects_ubo);
       glBindBuffer(GL_UNIFORM_BUFFER, buffers.objects_ubo);
       glBufferData(GL_UNIFORM_BUFFER, uboAligned(sizeof(ObjectData)) * numObjects, NULL, GL_STATIC_DRAW);
@@ -888,8 +886,9 @@ namespace basiccmdlist
       glEnableClientState(GL_ELEMENT_ARRAY_UNIFIED_NV);
       glEnableClientState(GL_UNIFORM_BUFFER_UNIFIED_NV);
 #if _DEBUG
-      // we are using "unsafe" addresses which will throw tons of warnings
-      glDisable(GL_DEBUG_OUTPUT);
+      // we are using what is considered "unsafe" addresses which will throw tons of warnings
+      GLuint msgid = 65537;
+      glDebugMessageControlARB(GL_DEBUG_SOURCE_API, GL_DEBUG_TYPE_OTHER, GL_DONT_CARE, 1, &msgid, GL_FALSE);
 #endif
     }
 
@@ -911,7 +910,7 @@ namespace basiccmdlist
       glDisableClientState(GL_UNIFORM_BUFFER_UNIFIED_NV);
 
 #if _DEBUG
-      glEnable(GL_DEBUG_OUTPUT);
+      glDebugMessageControlARB(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, NULL, GL_TRUE);
 #endif
     }
   }
