@@ -7,7 +7,7 @@ In this sample the **NV_command_list** extension is used to render a basic scene
 This new extension is built around bindless GPU pointers/handles and three more technologies, which allow rendering scenes with many state changes and hundred thousands of drawcalls at extremely low CPU time:
 
 - *Tokenized Rendering*:
- -  Evolution of the "MultiDrawIndirect" mechanism in OpenGL
+ - Evolution of the "MultiDrawIndirect" mechanism in OpenGL
  - Commands are encoded into binary data (tokens), instead of issuing classic gl calls, this allows the driver or the GPU to efficiently iterate over a stream of many commands in a single or multiple sequences: **glDrawCommands( ...tokenbuffer, offsets[], sizes[], numSequences)**
  - The tokens are stored in regular OpenGL buffers and can be re-used across frames, or manipulated by the GPU itself. Latency-free occlusion culling can be implemented this way (a special terminate sequence token exists).
  - Next to draw calls, the tokens cover the most frequent state changes (vertex, index, uniform-buffers) and a few basic scalar changes (blend color, polygonoffset, stencil ref...).

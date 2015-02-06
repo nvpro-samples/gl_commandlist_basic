@@ -610,14 +610,20 @@ namespace basiccmdlist
       glVertexAttribBinding(VERTEX_UV,    0);
       // prime the stride parameter, used by bindless VBO and statesystem
       glBindVertexBuffer(0,0,0, sizeof(Vertex));
+      
+      // temp workaround
+      if (hwsupport){
+        glBufferAddressRangeNV(GL_VERTEX_ATTRIB_ARRAY_ADDRESS_NV,0,0,0);
+        glBufferAddressRangeNV(GL_ELEMENT_ARRAY_ADDRESS_NV,0,0,0);
+        glBufferAddressRangeNV(GL_UNIFORM_BUFFER_ADDRESS_NV,UBO_OBJECT,0,0);
+        glBufferAddressRangeNV(GL_UNIFORM_BUFFER_ADDRESS_NV,UBO_SCENE,0,0);
+      }
 
       // let's create the first stateobject
       glUseProgram( progManager.get( programs.draw_scene) );
 
       if (hwsupport){
-        glEnableClientState(GL_VERTEX_ATTRIB_ARRAY_UNIFIED_NV);
         glStateCaptureNV(cmdlist.stateobj_draw, GL_TRIANGLES);
-        glDisableClientState(GL_VERTEX_ATTRIB_ARRAY_UNIFIED_NV);
       }
 
 
@@ -641,9 +647,7 @@ namespace basiccmdlist
         // or more efficiently using the system which will use state diffs
         cmdlist.statesystem.applyGL( cmdlist.stateid_draw_geo, cmdlist.stateid_draw, true);
 
-        glEnableClientState(GL_VERTEX_ATTRIB_ARRAY_UNIFIED_NV);
         glStateCaptureNV(cmdlist.stateobj_draw_geo, GL_TRIANGLES);
-        glDisableClientState(GL_VERTEX_ATTRIB_ARRAY_UNIFIED_NV);
       }
 
       // since we will toggle between two states, let the emulation cache the differences
