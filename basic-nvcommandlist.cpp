@@ -317,7 +317,7 @@ namespace basiccmdlist
     {
       // pattern texture
       int size = 32;
-      std::vector<nv_math::vector4<unsigned char>>  texels;
+      std::vector<nv_math::vector4<unsigned char> >  texels;
       texels.resize(size * size);
 
       for (int y = 0; y < size; y++){
