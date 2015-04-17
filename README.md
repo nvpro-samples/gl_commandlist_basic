@@ -19,18 +19,16 @@ This new extension is built around bindless GPU pointers/handles and three more 
 // Below you will find the token definition to update a UBO binding. Compared 
 // to standard UBOs, tokens update the binding per stage.
 
-TokenUbo
-{
-  GLuint header;        // glGetCommandHeaderNV(GL_UNIFORM_ADDRESS_COMMAND_NV)
- 
+
   UniformAddressCommandNV  
   {
+    GLuint header;      // glGetCommandHeaderNV(GL_UNIFORM_ADDRESS_COMMAND_NV)
     GLushort   index;   // in glsl: layout(binding=INDEX,commandBindableNV) uniform ...
     GLushort   stage;   // glGetStageIndexNV(GL_VERTEX_SHADER)
     GLuint64   address; // glGetNamedBufferParameterui64vNV(buffer,
                         //   GL_BUFFER_GPU_ADDRESS, &address);
   } cmd;
-}
+
 
 // The mentioned glGets should not be done at encode time
 ```
@@ -90,8 +88,13 @@ Depending on the availability of the extension, the sample allows to switch betw
 
 As well as initialization and state update functions:
 
+ - Sample::initCommandListMinimal()
+ - Sample::updateCommandListStateMinimal()
+
  - Sample::initCommandList()
  - Sample::updateCommandListState()
+ 
+The ''Minimal'' functions are used if the emulation layer is disabled via ```#define ALLOW_EMULATION_LAYER 0``` on top of the file. They represent the bare minimum work to do and don't make sue of the nvtoken helper classes.
 
 The emulation layer allows to roughly get an idea how the glDrawCommands* and glStateCapture work internally, and also aids debugging as the tokens are never error-checked. Customizing this emulation may also be useful as permanent compatibility layer for driver/hardware combinations which do not run the extension natively.
 

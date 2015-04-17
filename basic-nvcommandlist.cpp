@@ -26,7 +26,8 @@
 
 #define DEBUG_FILTER     1
 
-#define USE_PROGRAM_FILTER  1
+#define USE_PROGRAM_FILTER        1
+#define ALLOW_EMULATION_LAYER     1
 
 #include <GL/glew.h>
 #include <nv_helpers/anttweakbar.hpp>
@@ -166,9 +167,6 @@ namespace basiccmdlist
       }
     };
     struct CmdList {
-      // for emulation
-      StateSystem       statesystem;
-      
       // we introduce variables that track when we changed global state
       StateIncarnation  state;
       StateIncarnation  captured;
@@ -176,9 +174,13 @@ namespace basiccmdlist
       // two state objects
       GLuint                stateobj_draw;
       GLuint                stateobj_draw_geo;
+
+#if ALLOW_EMULATION_LAYER
+      // for emulation
+      StateSystem       statesystem;
       StateSystem::StateID  stateid_draw;
       StateSystem::StateID  stateid_draw_geo;
-
+#endif
 
       // there is multiple ways to draw the scene
       // either via buffer, cmdlist object, or emulation
@@ -218,14 +220,19 @@ namespace basiccmdlist
     bool initFramebuffers(int width, int height);
     bool initScene();
 
+#if ALLOW_EMULATION_LAYER
     bool  initCommandList();
     void  updateCommandListState();
-
+#else
+    bool  initCommandListMinimal();
+    void  updateCommandListStateMinimal();
+#endif
     void  drawStandard();
     void  drawTokenBuffer();
     void  drawTokenList();
+#if ALLOW_EMULATION_LAYER
     void  drawTokenEmulation();
-
+#endif
     CameraControl m_control;
 
     void end() {
@@ -453,6 +460,207 @@ namespace basiccmdlist
     return true;
   }
 
+  NVP_INLINE GLuint getAddressLo(GLuint64 address){
+    return GLuint(address & 0xFFFFFFFF);
+  }
+  NVP_INLINE GLuint getAddressHi(GLuint64 address){
+    return GLuint(address >> 32);
+  }
+
+#if !ALLOW_EMULATION_LAYER
+
+  bool Sample::initCommandListMinimal()
+  {
+    hwsupport = init_NV_command_list(NVPWindow::sysGetProcAddress) ? true : false;
+    if (!hwsupport) return true;
+
+    glCreateStatesNV(1,&cmdlist.stateobj_draw);
+    glCreateStatesNV(1,&cmdlist.stateobj_draw_geo);
+
+    glGenBuffers(1,&cmdlist.tokenBuffer);
+    glCreateCommandListsNV(1,&cmdlist.tokenCmdList);
+
+    GLenum    headerUbo   = glGetCommandHeaderNV( GL_UNIFORM_ADDRESS_COMMAND_NV,    sizeof(UniformAddressCommandNV) );
+    GLenum    headerVbo   = glGetCommandHeaderNV( GL_ATTRIBUTE_ADDRESS_COMMAND_NV,  sizeof(AttributeAddressCommandNV) );
+    GLenum    headerIbo   = glGetCommandHeaderNV( GL_ELEMENT_ADDRESS_COMMAND_NV,    sizeof(ElementAddressCommandNV) );
+    GLenum    headerDraw  = glGetCommandHeaderNV( GL_DRAW_ELEMENTS_COMMAND_NV,      sizeof(DrawElementsCommandNV) );
+
+    GLushort  stageVertex    = glGetStageIndexNV(GL_VERTEX_SHADER);
+    GLushort  stageFragment  = glGetStageIndexNV(GL_FRAGMENT_SHADER);
+    GLushort  stageGeometry  = glGetStageIndexNV(GL_GEOMETRY_SHADER);
+
+
+    // create actual token stream from our scene
+    {
+      NVTokenSequence& seq = cmdlist.tokenSequence;
+      std::string& stream  = cmdlist.tokenData;
+
+      size_t offset = 0;
+
+      // at first we bind the scene ubo to all used stages
+      {
+        UniformAddressCommandNV ubo;
+        ubo.header    = headerUbo;
+        ubo.index     = UBO_SCENE;
+        ubo.addressLo = getAddressLo(buffersADDR.scene_ubo);
+        ubo.addressHi = getAddressHi(buffersADDR.scene_ubo);
+
+        ubo.stage     = stageVertex;
+        nvtokenEnqueue(stream, ubo);
+        ubo.stage     = stageGeometry;
+        nvtokenEnqueue(stream, ubo);
+        ubo.stage     = stageFragment;
+        nvtokenEnqueue(stream, ubo);
+      }
+
+      // then we iterate over all objects in our scene
+      GLuint lastStateobj = 0;
+      for (size_t i = 0; i < objects.size(); i++){
+        const ObjectInfo& obj = objects[i];
+
+        GLuint usedStateobj = obj.program == programs.draw_scene ? cmdlist.stateobj_draw : cmdlist.stateobj_draw_geo;
+
+        if (lastStateobj != 0 && (usedStateobj != lastStateobj || !USE_PROGRAM_FILTER)){
+          // Whenever our program changes a new stateobject is required,
+          // hence the current sequence gets appended
+          seq.offsets.push_back(offset);
+          seq.sizes.push_back(GLsizei(stream.size() - offset));
+          seq.states.push_back(lastStateobj);
+
+          // By passing the fbo here, it means we can render objects
+          // even as the fbos get resized (and their textures changed).
+          // If we would pass 0 it would mean the stateobject's fbo was used
+          // which means on fbo resizes we would have to recreate all stateobjects.
+          seq.fbos.push_back( fbos.scene );  
+
+
+          // new sequence start
+          offset = stream.size();
+        }
+
+        AttributeAddressCommandNV vbo;
+        vbo.header    = headerVbo;
+        vbo.index     = 0;
+        vbo.addressLo = getAddressLo(obj.vboADDR);
+        vbo.addressHi = getAddressHi(obj.vboADDR);
+        nvtokenEnqueue(stream, vbo);
+
+        ElementAddressCommandNV ibo;
+        ibo.header    = headerIbo;
+        ibo.typeSizeInByte = 4;
+        ibo.addressLo = getAddressLo(obj.iboADDR);
+        ibo.addressHi = getAddressHi(obj.iboADDR);
+        nvtokenEnqueue(stream, ibo);
+
+        UniformAddressCommandNV ubo;
+        ubo.header = headerUbo;
+        ubo.index  = UBO_OBJECT;
+        ubo.addressLo = getAddressLo(buffersADDR.objects_ubo + GLuint(uboAligned(sizeof(ObjectData))*i));
+        ubo.addressHi = getAddressHi(buffersADDR.objects_ubo + GLuint(uboAligned(sizeof(ObjectData))*i));
+
+        ubo.stage  = stageVertex;
+        nvtokenEnqueue(stream, ubo);
+        ubo.stage  = stageFragment;
+        nvtokenEnqueue(stream, ubo);
+
+        if (usedStateobj == cmdlist.stateobj_draw_geo){
+          // also add for geometry stage
+          ubo.stage  = stageGeometry;
+          nvtokenEnqueue(stream, ubo);
+        }
+
+        DrawElementsCommandNV  draw;
+        draw.header = headerDraw;
+        draw.baseVertex = 0;
+        draw.firstIndex = 0;
+        draw.count = obj.numIndices;
+        nvtokenEnqueue(stream, draw);
+
+        lastStateobj = usedStateobj;
+      }
+
+      seq.offsets.push_back(offset);
+      seq.sizes.push_back(GLsizei(stream.size() - offset));
+      seq.fbos.push_back(fbos.scene );
+      seq.states.push_back(lastStateobj);
+    }
+
+    // upload the tokens once, so we can reuse them efficiently
+    glNamedBufferStorageEXT(cmdlist.tokenBuffer, cmdlist.tokenData.size(), &cmdlist.tokenData[0], 0);
+
+    // for list generation convert offsets to pointers
+    cmdlist.tokenSequenceList = cmdlist.tokenSequence;
+    for (size_t i = 0; i < cmdlist.tokenSequenceList.offsets.size(); i++){
+      cmdlist.tokenSequenceList.offsets[i] += (GLintptr)&cmdlist.tokenData[0];
+    }
+
+    updateCommandListStateMinimal();
+
+    return true;
+  }
+
+
+  void Sample::updateCommandListStateMinimal()
+  {
+
+    if (cmdlist.state.programIncarnation != cmdlist.captured.programIncarnation)
+    {
+      // generic state shared by both programs
+      glBindFramebuffer(GL_FRAMEBUFFER, fbos.scene);
+
+      glEnable(GL_DEPTH_TEST);
+      glEnable(GL_CULL_FACE);
+
+      glEnableVertexAttribArray(VERTEX_POS);
+      glEnableVertexAttribArray(VERTEX_NORMAL);
+      glEnableVertexAttribArray(VERTEX_UV);
+
+      glVertexAttribFormat(VERTEX_POS,    3, GL_FLOAT, GL_FALSE,  offsetof(Vertex,position));
+      glVertexAttribFormat(VERTEX_NORMAL, 3, GL_SHORT, GL_TRUE,   offsetof(Vertex,normal));
+      glVertexAttribFormat(VERTEX_UV,     2, GL_FLOAT, GL_FALSE,  offsetof(Vertex,uv));
+      glVertexAttribBinding(VERTEX_POS,   0);
+      glVertexAttribBinding(VERTEX_NORMAL,0);
+      glVertexAttribBinding(VERTEX_UV,    0);
+      // prime the stride parameter, used by bindless VBO and statesystem
+      glBindVertexBuffer(0,0,0, sizeof(Vertex));
+
+      glBufferAddressRangeNV(GL_VERTEX_ATTRIB_ARRAY_ADDRESS_NV,0,0,0);
+      glBufferAddressRangeNV(GL_ELEMENT_ARRAY_ADDRESS_NV,0,0,0);
+      glBufferAddressRangeNV(GL_UNIFORM_BUFFER_ADDRESS_NV,UBO_OBJECT,0,0);
+      glBufferAddressRangeNV(GL_UNIFORM_BUFFER_ADDRESS_NV,UBO_SCENE,0,0);
+
+      // let's create the first stateobject
+      glUseProgram( progManager.get( programs.draw_scene) );
+      glStateCaptureNV(cmdlist.stateobj_draw, GL_TRIANGLES);
+
+      // and second
+      glUseProgram( progManager.get( programs.draw_scene_geo) );
+      glStateCaptureNV(cmdlist.stateobj_draw_geo, GL_TRIANGLES);
+
+      glDisableVertexAttribArray(VERTEX_POS);
+      glDisableVertexAttribArray(VERTEX_NORMAL);
+      glDisableVertexAttribArray(VERTEX_UV);
+      glBindFramebuffer(GL_FRAMEBUFFER, 0);
+      glDisable(GL_DEPTH_TEST);
+      glDisable(GL_CULL_FACE);
+    }
+
+    if (  cmdlist.state.programIncarnation != cmdlist.captured.programIncarnation ||
+          cmdlist.state.fboIncarnation     != cmdlist.captured.fboIncarnation)
+    {
+      // Because the commandlist object takes all state information 
+      // from the objects during compile, we have to update commandlist
+      // every time a state object or fbo changes.
+      NVTokenSequence &seq = cmdlist.tokenSequenceList;
+      glCommandListSegmentsNV(cmdlist.tokenCmdList,1);
+      glListDrawCommandsStatesClientNV(cmdlist.tokenCmdList,0, (const void**)&seq.offsets[0], &seq.sizes[0], &seq.states[0], &seq.fbos[0], int(seq.states.size()) );
+      glCompileCommandListNV(cmdlist.tokenCmdList);
+    }
+
+    cmdlist.captured = cmdlist.state;
+  }
+
+#else
 
   bool Sample::initCommandList()
   {
@@ -586,7 +794,6 @@ namespace basiccmdlist
     return true;
   }
 
-
   void Sample::updateCommandListState()
   {
     
@@ -678,7 +885,7 @@ namespace basiccmdlist
     cmdlist.captured = cmdlist.state;
   }
 
-
+#endif
 
   bool Sample::begin()
   {
@@ -701,7 +908,11 @@ namespace basiccmdlist
     validated = validated && initProgram();
     validated = validated && initFramebuffers(m_window.m_viewsize[0],m_window.m_viewsize[1]);
     validated = validated && initScene();
+#if ALLOW_EMULATION_LAYER
     validated = validated && initCommandList();
+#else
+    validated = validated && initCommandListMinimal();
+#endif
 
     TwBar *bar = TwNewBar("mainbar");
     TwDefine(" GLOBAL contained=true help='OpenGL samples.\nCopyright NVIDIA Corporation 2014' ");
@@ -710,11 +921,13 @@ namespace basiccmdlist
 
     TwEnumVal enumVals[] = {
       {DRAW_STANDARD,"standard"},
+#if ALLOW_EMULATION_LAYER
       {DRAW_TOKEN_EMULATED,"nvcmdlist emulated"},
+#endif
       {DRAW_TOKEN_BUFFER,"nvcmdlist buffer"},
       {DRAW_TOKEN_LIST,"nvcmdlist list"},
     };
-    TwType algorithmType = TwDefineEnum("algorithm", enumVals, hwsupport ? 4 : 2);
+    TwType algorithmType = TwDefineEnum("algorithm", enumVals, (hwsupport ? 3 : 1) + (ALLOW_EMULATION_LAYER ? 1 : 0));
     TwAddVarRW(bar, "mode", algorithmType,  &tweak.mode,     " label='draw mode' ");
     TwAddVarRW(bar, "shrink", TW_TYPE_FLOAT,    &sceneUbo.shrinkFactor,     " label='shrink' max=1 step=0.1 ");
     TwAddVarRW(bar, "lightdir", TW_TYPE_DIR3F,  &tweak.lightDir,     " label='lightdir' ");
@@ -781,9 +994,11 @@ namespace basiccmdlist
       case DRAW_STANDARD:
         drawStandard();
         break;
+#if ALLOW_EMULATION_LAYER
       case DRAW_TOKEN_EMULATED:
         drawTokenEmulation();
         break;
+#endif
       case DRAW_TOKEN_BUFFER:
         drawTokenBuffer();
         break;
@@ -862,7 +1077,11 @@ namespace basiccmdlist
   void Sample::drawTokenBuffer()
   {
     if ( cmdlist.state != cmdlist.captured ){
-      updateCommandListState();
+      #if ALLOW_EMULATION_LAYER
+        updateCommandListState();
+      #else
+        updateCommandListStateMinimal();
+      #endif
     }
 
     glDrawCommandsStatesNV(cmdlist.tokenBuffer, 
@@ -876,13 +1095,17 @@ namespace basiccmdlist
   void Sample::drawTokenList()
   {
     if ( cmdlist.state != cmdlist.captured ){
+#if ALLOW_EMULATION_LAYER
       updateCommandListState();
+#else
+      updateCommandListStateMinimal();
+#endif
     }
 
     glCallCommandListNV(cmdlist.tokenCmdList);
 
   }
-
+#if ALLOW_EMULATION_LAYER
   void Sample::drawTokenEmulation()
   {
     if (bindlessVboUbo){
@@ -918,7 +1141,7 @@ namespace basiccmdlist
 #endif
     }
   }
-
+#endif
 }
 
 using namespace basiccmdlist;
