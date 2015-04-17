@@ -91,10 +91,11 @@ As well as initialization and state update functions:
  - Sample::initCommandListMinimal()
  - Sample::updateCommandListStateMinimal()
 
+
  - Sample::initCommandList()
  - Sample::updateCommandListState()
  
-The ''Minimal'' functions are used if the emulation layer is disabled via ```#define ALLOW_EMULATION_LAYER 0``` on top of the file. They represent the bare minimum work to do and don't make sue of the nvtoken helper classes.
+The ''Minimal'' functions are used if the emulation layer is disabled via ```#define ALLOW_EMULATION_LAYER 0``` on top of the file. They represent the bare minimum work to do and don't make use of the nvtoken helper classes.
 
 The emulation layer allows to roughly get an idea how the glDrawCommands* and glStateCapture work internally, and also aids debugging as the tokens are never error-checked. Customizing this emulation may also be useful as permanent compatibility layer for driver/hardware combinations which do not run the extension natively.
 
