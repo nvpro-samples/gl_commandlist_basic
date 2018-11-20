@@ -1,27 +1,30 @@
-/*-----------------------------------------------------------------------
-  Copyright (c) 2014, NVIDIA. All rights reserved.
+/* Copyright (c) 2014-2018, NVIDIA CORPORATION. All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *  * Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ *  * Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *  * Neither the name of NVIDIA CORPORATION nor the names of its
+ *    contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ``AS IS'' AND ANY
+ * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
+ * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
 
-  Redistribution and use in source and binary forms, with or without
-  modification, are permitted provided that the following conditions
-  are met:
-   * Redistributions of source code must retain the above copyright
-     notice, this list of conditions and the following disclaimer.
-   * Neither the name of its contributors may be used to endorse 
-     or promote products derived from this software without specific
-     prior written permission.
-
-  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ``AS IS'' AND ANY
-  EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
-  PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR
-  CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
-  EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
-  PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
-  PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
-  OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
------------------------------------------------------------------------*/
 /* Contact ckubisch@nvidia.com (Christoph Kubisch) for feedback */
 
 #define DEBUG_FILTER     1
@@ -29,17 +32,24 @@
 #define USE_PROGRAM_FILTER        1
 #define ALLOW_EMULATION_LAYER     1
 
-#include <GL/glew.h>
-#include <nv_helpers/anttweakbar.hpp>
-#include <nv_helpers_gl/WindowProfiler.hpp>
-#include <nv_helpers_gl/glsltypes.hpp>
+#include <nv_helpers_gl/extensions_gl.hpp>
 
-#include <nv_helpers_gl/error.hpp>
-#include <nv_helpers_gl/programmanager.hpp>
+#include <imgui/imgui_helper.h>
+#include <imgui/imgui_impl_gl.h>
+
+#include <nv_math/nv_math_glsltypes.h>
+#include <nv_helpers_gl/glsltypes_gl.hpp>
+
 #include <nv_helpers/geometry.hpp>
 #include <nv_helpers/misc.hpp>
-#include <nv_helpers_gl/glresources.hpp>
 #include <nv_helpers/cameracontrol.hpp>
+
+#include <nv_helpers_gl/appwindowprofiler_gl.hpp>
+#include <nv_helpers_gl/error_gl.hpp>
+#include <nv_helpers_gl/programmanager_gl.hpp>
+#include <nv_helpers_gl/base_gl.hpp>
+
+#include <nv_helpers/tnulled.hpp>
 
 #include "nvtoken.hpp"
 using namespace nvtoken;
@@ -55,16 +65,15 @@ namespace basiccmdlist
   int const SAMPLE_SIZE_WIDTH(800);
   int const SAMPLE_SIZE_HEIGHT(600);
   int const SAMPLE_MAJOR_VERSION(4);
-  int const SAMPLE_MINOR_VERSION(3);
+  int const SAMPLE_MINOR_VERSION(5);
 
 
   static const int numObjects = 1024;
   static const int grid = 64;
   static const float globalscale = 8.0f;
 
-  class Sample : public nv_helpers_gl::WindowProfiler 
+  class Sample : public nv_helpers_gl::AppWindowProfilerGL
   {
-    ProgramManager progManager;
 
     enum DrawMode {
       DRAW_STANDARD,
@@ -80,7 +89,7 @@ namespace basiccmdlist
     } programs;
 
     struct {
-      ResourceGLuint
+      nv_helpers::TNulled<GLuint>
         scene_color,
         scene_depthstencil,
         color;
@@ -94,12 +103,12 @@ namespace basiccmdlist
     }texturesADDR;
 
     struct {
-      ResourceGLuint
+      nv_helpers::TNulled<GLuint>
         scene;
     }fbos;
 
     struct {
-      ResourceGLuint  
+      nv_helpers::TNulled<GLuint>
         box_vbo,
         box_ibo,
         sphere_vbo,
@@ -193,26 +202,27 @@ namespace basiccmdlist
     } cmdlist;
 
     struct Tweak {
-      DrawMode    mode;
+      DrawMode    mode = DRAW_STANDARD;
       vec3        lightDir;
-
-      Tweak() 
-        : mode(DRAW_STANDARD)
-      {
-
-      }
     };
 
-    Tweak    tweak;
+    ProgramManager          m_progManager;
 
-    std::vector<ObjectInfo> objects;
+    ImGuiH::Registry        m_ui;
+    double                  m_uiTime;
 
-    SceneData sceneUbo;
-    bool      bindlessVboUbo;
-    bool      hwsupport;
+    Tweak                   m_tweak;
+
+    std::vector<ObjectInfo> m_sceneObjects;
+    SceneData               m_sceneUbo;
+
+    bool      m_bindlessVboUbo;
+    bool      m_hwsupport;
  
+    CameraControl   m_control;
 
     bool begin();
+    void processUI(double time);
     void think(double time);
     void resize(int width, int height);
 
@@ -233,23 +243,26 @@ namespace basiccmdlist
 #if ALLOW_EMULATION_LAYER
     void  drawTokenEmulation();
 #endif
-    CameraControl m_control;
+    
 
     void end() {
-      TwTerminate();
+      ImGui::ShutdownGL();
     }
     // return true to prevent m_window updates
-    bool mouse_pos    (int x, int y) {
-      return !!TwEventMousePosGLFW(x,y); 
+    bool mouse_pos(int x, int y) {
+      return ImGuiH::mouse_pos(x, y);
     }
-    bool mouse_button (int button, int action) {
-      return !!TwEventMouseButtonGLFW(button, action);
+    bool mouse_button(int button, int action) {
+      return ImGuiH::mouse_button(button, action);
     }
-    bool mouse_wheel  (int wheel) {
-      return !!TwEventMouseWheelGLFW(wheel); 
+    bool mouse_wheel(int wheel) {
+      return ImGuiH::mouse_wheel(wheel);
     }
-    bool key_button   (int button, int action, int mods) {
-      return handleTwKeyPressed(button,action,mods);
+    bool key_char(int button) {
+      return ImGuiH::key_char(button);
+    }
+    bool key_button(int button, int action, int mods) {
+      return ImGuiH::key_button(button, action, mods);
     }
 
   };
@@ -257,40 +270,41 @@ namespace basiccmdlist
   bool Sample::initProgram()
   {
     bool validated(true);
-    progManager.addDirectory( std::string(PROJECT_NAME));
-    progManager.addDirectory( sysExePath() + std::string(PROJECT_RELDIRECTORY));
-    progManager.addDirectory( std::string(PROJECT_ABSDIRECTORY));
+    m_progManager.m_filetype = ShaderFileManager::FILETYPE_GLSL;
+    m_progManager.addDirectory( std::string(PROJECT_NAME));
+    m_progManager.addDirectory( sysExePath() + std::string(PROJECT_RELDIRECTORY));
+    m_progManager.addDirectory( std::string(PROJECT_ABSDIRECTORY));
 
-    progManager.registerInclude("common.h", "common.h");
+    m_progManager.registerInclude("common.h", "common.h");
 
-    programs.draw_scene = progManager.createProgram(
+    programs.draw_scene = m_progManager.createProgram(
       ProgramManager::Definition(GL_VERTEX_SHADER,          "scene.vert.glsl"),
       ProgramManager::Definition(GL_FRAGMENT_SHADER,        "scene.frag.glsl"));
 
-    programs.draw_scene_geo = progManager.createProgram(
+    programs.draw_scene_geo = m_progManager.createProgram(
       ProgramManager::Definition(GL_VERTEX_SHADER,          "scene.vert.glsl"),
       ProgramManager::Definition(GL_GEOMETRY_SHADER,        "scene.geo.glsl"),
       ProgramManager::Definition(GL_FRAGMENT_SHADER,        "scene.frag.glsl"));
 
     cmdlist.state.programIncarnation++;
     
-    validated = progManager.areProgramsValid();
+    validated = m_progManager.areProgramsValid();
 
     return validated;
   }
 
   bool Sample::initFramebuffers(int width, int height)
   {
-    if (textures.scene_color && GLEW_ARB_bindless_texture){
+    if (textures.scene_color && has_GL_ARB_bindless_texture){
       glMakeTextureHandleNonResidentARB(texturesADDR.scene_color);
       glMakeTextureHandleNonResidentARB(texturesADDR.scene_depthstencil);
     }
 
-    newTexture(textures.scene_color);
+    newTexture(textures.scene_color, GL_TEXTURE_2D);
     glBindTexture (GL_TEXTURE_2D, textures.scene_color);
     glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA8, width, height);
 
-    newTexture(textures.scene_depthstencil);
+    newTexture(textures.scene_depthstencil, GL_TEXTURE_2D);
     glBindTexture (GL_TEXTURE_2D, textures.scene_depthstencil);
     glTexStorage2D(GL_TEXTURE_2D, 1, GL_DEPTH24_STENCIL8, width, height);
     glBindTexture (GL_TEXTURE_2D, 0);
@@ -305,7 +319,7 @@ namespace basiccmdlist
     // As stateobjects and cmdlist objects make references to texture memory, you need ensure residency,
     // as well as rebuilding state objects as FBO memory changes.
 
-    if (GLEW_ARB_bindless_texture){
+    if (has_GL_ARB_bindless_texture){
       texturesADDR.scene_color        = glGetTextureHandleARB(textures.scene_color);
       texturesADDR.scene_depthstencil = glGetTextureHandleARB(textures.scene_depthstencil);
       glMakeTextureHandleResidentARB(texturesADDR.scene_color);
@@ -341,11 +355,11 @@ namespace basiccmdlist
         }
       }
 
-      newTexture(textures.color);
+      newTexture(textures.color, GL_TEXTURE_2D);
       glBindTexture   (GL_TEXTURE_2D,textures.color);
       glTexStorage2D  (GL_TEXTURE_2D, mipMapLevels(size), GL_RGBA8, size,size);
       glTexSubImage2D (GL_TEXTURE_2D,0,0,0,size,size,GL_RGBA,GL_UNSIGNED_BYTE, &texels[0]);
-      glTexParameterf (GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, 8.0f);
+      glTexParameterf (GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY, 8.0f);
       glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
       glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
       glGenerateMipmap(GL_TEXTURE_2D);
@@ -360,11 +374,11 @@ namespace basiccmdlist
 
       geometry::Box<Vertex>     box;
       newBuffer(buffers.box_ibo);
-      glNamedBufferStorageEXT(buffers.box_ibo, box.getTriangleIndicesSize(), &box.m_indicesTriangles[0], 0);
+      glNamedBufferStorage(buffers.box_ibo, box.getTriangleIndicesSize(), &box.m_indicesTriangles[0], 0);
       newBuffer(buffers.box_vbo);
-      glNamedBufferStorageEXT(buffers.box_vbo, box.getVerticesSize(), &box.m_vertices[0], 0);
+      glNamedBufferStorage(buffers.box_vbo, box.getVerticesSize(), &box.m_vertices[0], 0);
 
-      if (bindlessVboUbo){
+      if (m_bindlessVboUbo){
         glGetNamedBufferParameterui64vNV(buffers.box_ibo, GL_BUFFER_GPU_ADDRESS_NV, &buffersADDR.box_ibo);
         glGetNamedBufferParameterui64vNV(buffers.box_vbo, GL_BUFFER_GPU_ADDRESS_NV, &buffersADDR.box_vbo);
         glMakeNamedBufferResidentNV(buffers.box_ibo,GL_READ_ONLY);
@@ -374,11 +388,11 @@ namespace basiccmdlist
 
       geometry::Sphere<Vertex>  sphere;
       newBuffer(buffers.sphere_ibo);
-      glNamedBufferStorageEXT(buffers.sphere_ibo, sphere.getTriangleIndicesSize(), &sphere.m_indicesTriangles[0], 0);
+      glNamedBufferStorage(buffers.sphere_ibo, sphere.getTriangleIndicesSize(), &sphere.m_indicesTriangles[0], 0);
       newBuffer(buffers.sphere_vbo);
-      glNamedBufferStorageEXT(buffers.sphere_vbo, sphere.getVerticesSize(), &sphere.m_vertices[0], 0);
+      glNamedBufferStorage(buffers.sphere_vbo, sphere.getVerticesSize(), &sphere.m_vertices[0], 0);
 
-      if (bindlessVboUbo){
+      if (m_bindlessVboUbo){
         glGetNamedBufferParameterui64vNV(buffers.sphere_ibo, GL_BUFFER_GPU_ADDRESS_NV, &buffersADDR.sphere_ibo);
         glGetNamedBufferParameterui64vNV(buffers.sphere_vbo, GL_BUFFER_GPU_ADDRESS_NV, &buffersADDR.sphere_vbo);
         glMakeNamedBufferResidentNV(buffers.sphere_ibo,GL_READ_ONLY);
@@ -390,12 +404,12 @@ namespace basiccmdlist
       newBuffer(buffers.objects_ubo);
       glBindBuffer(GL_UNIFORM_BUFFER, buffers.objects_ubo);
       glBufferData(GL_UNIFORM_BUFFER, uboAligned(sizeof(ObjectData)) * numObjects, NULL, GL_STATIC_DRAW);
-      if (bindlessVboUbo){
+      if (m_bindlessVboUbo){
         glGetNamedBufferParameterui64vNV(buffers.objects_ubo, GL_BUFFER_GPU_ADDRESS_NV, &buffersADDR.objects_ubo);
         glMakeNamedBufferResidentNV(buffers.objects_ubo,GL_READ_ONLY);
       }
       
-      objects.reserve(numObjects);
+      m_sceneObjects.reserve(numObjects);
       for (int i = 0; i < numObjects; i++){
         ObjectData  ubodata;
 
@@ -439,7 +453,7 @@ namespace basiccmdlist
           info.numIndices = box.getTriangleIndicesCount();
         }
         
-        objects.push_back(info);
+        m_sceneObjects.push_back(info);
       }
 
       glBindBuffer(GL_UNIFORM_BUFFER, 0);
@@ -450,7 +464,7 @@ namespace basiccmdlist
       glBindBuffer(GL_UNIFORM_BUFFER, buffers.scene_ubo);
       glBufferData(GL_UNIFORM_BUFFER, sizeof(SceneData), NULL, GL_DYNAMIC_DRAW);
       glBindBuffer(GL_UNIFORM_BUFFER, 0);
-      if (bindlessVboUbo){
+      if (m_bindlessVboUbo){
         glGetNamedBufferParameterui64vNV(buffers.scene_ubo, GL_BUFFER_GPU_ADDRESS_NV, &buffersADDR.scene_ubo);
         glMakeNamedBufferResidentNV(buffers.scene_ubo,GL_READ_ONLY);
       }
@@ -460,10 +474,10 @@ namespace basiccmdlist
     return true;
   }
 
-  NVP_INLINE GLuint getAddressLo(GLuint64 address){
+  NV_INLINE GLuint getAddressLo(GLuint64 address){
     return GLuint(address & 0xFFFFFFFF);
   }
-  NVP_INLINE GLuint getAddressHi(GLuint64 address){
+  NV_INLINE GLuint getAddressHi(GLuint64 address){
     return GLuint(address >> 32);
   }
 
@@ -471,13 +485,13 @@ namespace basiccmdlist
 
   bool Sample::initCommandListMinimal()
   {
-    hwsupport = init_NV_command_list(NVPWindow::sysGetProcAddress) ? true : false;
-    if (!hwsupport) return true;
+    m_hwsupport = init_NV_command_list(NVPWindow::sysGetProcAddressGL) ? true : false;
+    if (!m_hwsupport) return true;
 
     glCreateStatesNV(1,&cmdlist.stateobj_draw);
     glCreateStatesNV(1,&cmdlist.stateobj_draw_geo);
 
-    glGenBuffers(1,&cmdlist.tokenBuffer);
+    glCreateBuffers(1,&cmdlist.tokenBuffer);
     glCreateCommandListsNV(1,&cmdlist.tokenCmdList);
 
     GLenum    headerUbo   = glGetCommandHeaderNV( GL_UNIFORM_ADDRESS_COMMAND_NV,    sizeof(UniformAddressCommandNV) );
@@ -515,8 +529,8 @@ namespace basiccmdlist
 
       // then we iterate over all objects in our scene
       GLuint lastStateobj = 0;
-      for (size_t i = 0; i < objects.size(); i++){
-        const ObjectInfo& obj = objects[i];
+      for (size_t i = 0; i < m_sceneObjects.size(); i++){
+        const ObjectInfo& obj = m_sceneObjects[i];
 
         GLuint usedStateobj = obj.program == programs.draw_scene ? cmdlist.stateobj_draw : cmdlist.stateobj_draw_geo;
 
@@ -586,7 +600,7 @@ namespace basiccmdlist
     }
 
     // upload the tokens once, so we can reuse them efficiently
-    glNamedBufferStorageEXT(cmdlist.tokenBuffer, cmdlist.tokenData.size(), &cmdlist.tokenData[0], 0);
+    glNamedBufferStorage(cmdlist.tokenBuffer, cmdlist.tokenData.size(), &cmdlist.tokenData[0], 0);
 
     // for list generation convert offsets to pointers
     cmdlist.tokenSequenceList = cmdlist.tokenSequence;
@@ -630,11 +644,11 @@ namespace basiccmdlist
       glBufferAddressRangeNV(GL_UNIFORM_BUFFER_ADDRESS_NV,UBO_SCENE,0,0);
 
       // let's create the first stateobject
-      glUseProgram( progManager.get( programs.draw_scene) );
+      glUseProgram( m_progManager.get( programs.draw_scene) );
       glStateCaptureNV(cmdlist.stateobj_draw, GL_TRIANGLES);
 
       // and second
-      glUseProgram( progManager.get( programs.draw_scene_geo) );
+      glUseProgram( m_progManager.get( programs.draw_scene_geo) );
       glStateCaptureNV(cmdlist.stateobj_draw_geo, GL_TRIANGLES);
 
       glDisableVertexAttribArray(VERTEX_POS);
@@ -664,20 +678,19 @@ namespace basiccmdlist
 
   bool Sample::initCommandList()
   {
-
-    hwsupport = init_NV_command_list(NVPWindow::sysGetProcAddress) ? true : false;
-    nvtokenInitInternals(hwsupport,bindlessVboUbo);
+    m_hwsupport = has_GL_NV_command_list ? true : false;
+    nvtokenInitInternals(m_hwsupport,m_bindlessVboUbo);
     cmdlist.statesystem.init();
 
     {
       cmdlist.statesystem.generate(1,&cmdlist.stateid_draw);
       cmdlist.statesystem.generate(1,&cmdlist.stateid_draw_geo);
     }
-    if (hwsupport){
+    if (m_hwsupport){
       glCreateStatesNV(1,&cmdlist.stateobj_draw);
       glCreateStatesNV(1,&cmdlist.stateobj_draw_geo);
 
-      glGenBuffers(1,&cmdlist.tokenBuffer);
+      glCreateBuffers(1,&cmdlist.tokenBuffer);
       glCreateCommandListsNV(1,&cmdlist.tokenCmdList);
     }
     else{
@@ -707,8 +720,8 @@ namespace basiccmdlist
 
       // then we iterate over all objects in our scene
       GLuint lastStateobj = 0;
-      for (size_t i = 0; i < objects.size(); i++){
-        const ObjectInfo& obj = objects[i];
+      for (size_t i = 0; i < m_sceneObjects.size(); i++){
+        const ObjectInfo& obj = m_sceneObjects[i];
         
         GLuint usedStateobj = obj.program == programs.draw_scene ? cmdlist.stateobj_draw : cmdlist.stateobj_draw_geo;
 
@@ -768,9 +781,9 @@ namespace basiccmdlist
       seq.states.push_back(lastStateobj);
     }
 
-    if (hwsupport){
+    if (m_hwsupport){
       // upload the tokens once, so we can reuse them efficiently
-      glNamedBufferStorageEXT(cmdlist.tokenBuffer, cmdlist.tokenData.size(), &cmdlist.tokenData[0], 0);
+      glNamedBufferStorage(cmdlist.tokenBuffer, cmdlist.tokenData.size(), &cmdlist.tokenData[0], 0);
 
       // for list generation convert offsets to pointers
       cmdlist.tokenSequenceList = cmdlist.tokenSequence;
@@ -819,7 +832,7 @@ namespace basiccmdlist
       glBindVertexBuffer(0,0,0, sizeof(Vertex));
       
       // temp workaround
-      if (hwsupport){
+      if (m_hwsupport){
         glBufferAddressRangeNV(GL_VERTEX_ATTRIB_ARRAY_ADDRESS_NV,0,0,0);
         glBufferAddressRangeNV(GL_ELEMENT_ARRAY_ADDRESS_NV,0,0,0);
         glBufferAddressRangeNV(GL_UNIFORM_BUFFER_ADDRESS_NV,UBO_OBJECT,0,0);
@@ -827,9 +840,9 @@ namespace basiccmdlist
       }
 
       // let's create the first stateobject
-      glUseProgram( progManager.get( programs.draw_scene) );
+      glUseProgram( m_progManager.get( programs.draw_scene) );
 
-      if (hwsupport){
+      if (m_hwsupport){
         glStateCaptureNV(cmdlist.stateobj_draw, GL_TRIANGLES);
       }
 
@@ -844,9 +857,9 @@ namespace basiccmdlist
       // When no getGL is called the state data matches the default
       // state of OpenGL.
 
-      state.program.program = progManager.get( programs.draw_scene_geo );
+      state.program.program = m_progManager.get( programs.draw_scene_geo );
       cmdlist.statesystem.set( cmdlist.stateid_draw_geo, state, GL_TRIANGLES);
-      if (hwsupport){
+      if (m_hwsupport){
         // we can apply the state directly with
         // glUseProgram( state.program.program );
         // or
@@ -869,7 +882,7 @@ namespace basiccmdlist
       glDisable(GL_CULL_FACE);
     }
 
-    if (hwsupport && (
+    if (m_hwsupport && (
         cmdlist.state.programIncarnation != cmdlist.captured.programIncarnation ||
         cmdlist.state.fboIncarnation     != cmdlist.captured.fboIncarnation))
     {
@@ -889,15 +902,15 @@ namespace basiccmdlist
 
   bool Sample::begin()
   {
-    TwInit(TW_OPENGL_CORE,NULL);
-    TwWindowSize(m_window.m_viewsize[0],m_window.m_viewsize[1]);
+    ImGuiH::Init(m_window.m_viewsize[0], m_window.m_viewsize[1], this);
+    ImGui::InitGL();
 
-    if (!GLEW_ARB_bindless_texture){
-      nvprintfLevel(LOGLEVEL_ERROR,"This sample requires ARB_bindless_texture");
+    if (!has_GL_ARB_bindless_texture){
+      LOGE("This sample requires ARB_bindless_texture");
       return false;
     }
 
-    bindlessVboUbo = GLEW_NV_vertex_buffer_unified_memory && sysExtensionSupported("GL_NV_uniform_buffer_unified_memory");
+    m_bindlessVboUbo = has_GL_NV_vertex_buffer_unified_memory && sysExtensionSupportedGL("GL_NV_uniform_buffer_unified_memory");
 
     bool validated(true);
 
@@ -914,37 +927,54 @@ namespace basiccmdlist
     validated = validated && initCommandListMinimal();
 #endif
 
-    TwBar *bar = TwNewBar("mainbar");
-    TwDefine(" GLOBAL contained=true help='OpenGL samples.\nCopyright NVIDIA Corporation 2014' ");
-    TwDefine(" mainbar position='0 0' size='350 200' color='0 0 0' alpha=128 valueswidth=170 ");
-    TwDefine((std::string(" mainbar label='") + PROJECT_NAME + "'").c_str());
-
-    TwEnumVal enumVals[] = {
-      {DRAW_STANDARD,"standard"},
+    {
+      m_ui.enumAdd(0, DRAW_STANDARD, "standard");
 #if ALLOW_EMULATION_LAYER
-      {DRAW_TOKEN_EMULATED,"nvcmdlist emulated"},
+      m_ui.enumAdd(0, DRAW_TOKEN_EMULATED, "nvcmdlist emulated");
 #endif
-      {DRAW_TOKEN_BUFFER,"nvcmdlist buffer"},
-      {DRAW_TOKEN_LIST,"nvcmdlist list"},
-    };
-    TwType algorithmType = TwDefineEnum("algorithm", enumVals, (hwsupport ? 3 : 1) + (ALLOW_EMULATION_LAYER ? 1 : 0));
-    TwAddVarRW(bar, "mode", algorithmType,  &tweak.mode,     " label='draw mode' ");
-    TwAddVarRW(bar, "shrink", TW_TYPE_FLOAT,    &sceneUbo.shrinkFactor,     " label='shrink' max=1 step=0.1 ");
-    TwAddVarRW(bar, "lightdir", TW_TYPE_DIR3F,  &tweak.lightDir,     " label='lightdir' ");
+      if (m_hwsupport) {
+        m_ui.enumAdd(0, DRAW_TOKEN_BUFFER, "nvcmdlist buffer");
+        m_ui.enumAdd(0, DRAW_TOKEN_LIST, "nvcmdlist list");
+      }
+    }
 
-    tweak.lightDir = normalize(vec3(-1,1,1));
+    m_tweak.lightDir = normalize(vec3(-1,1,1));
 
     m_control.m_sceneOrbit      = vec3(0.0f);
     m_control.m_sceneDimension  = float(grid) * 0.2f;
     m_control.m_viewMatrix      = nv_math::look_at(m_control.m_sceneOrbit - vec3(0,0,-m_control.m_sceneDimension), m_control.m_sceneOrbit, vec3(0,1,0));
 
-    sceneUbo.shrinkFactor = 0.5f;
+    m_sceneUbo.shrinkFactor = 0.5f;
 
     return validated;
   }
 
+  void Sample::processUI(double time)
+  {
+
+    int width = m_window.m_viewsize[0];
+    int height = m_window.m_viewsize[1];
+
+    // Update imgui configuration
+    auto &imgui_io = ImGui::GetIO();
+    imgui_io.DeltaTime = static_cast<float>(time - m_uiTime);
+    imgui_io.DisplaySize = ImVec2(width, height);
+
+    m_uiTime = time;
+
+    ImGui::NewFrame();
+    ImGui::SetNextWindowSize(ImVec2(350, 0), ImGuiCond_FirstUseEver);
+    if (ImGui::Begin("NVIDIA " PROJECT_NAME, nullptr)) {
+      m_ui.enumCombobox(0, "draw mode", &m_tweak.mode);
+      ImGui::SliderFloat("shrink factor", &m_sceneUbo.shrinkFactor, 0, 1.0f);
+    }
+    ImGui::End();
+  }
+
   void Sample::think(double time)
   {
+    processUI(time);
+
     m_control.processActions(m_window.m_viewsize,
       nv_math::vec2f(m_window.m_mouseCurrent[0],m_window.m_mouseCurrent[1]),
       m_window.m_mouseButtonFlags, m_window.m_wheel);
@@ -953,30 +983,30 @@ namespace basiccmdlist
     int height  = m_window.m_viewsize[1];
 
     if (m_window.onPress(KEY_R)){
-      progManager.reloadPrograms();
+      m_progManager.reloadPrograms();
       cmdlist.state.programIncarnation++;
     }
-    if (!progManager.areProgramsValid()){
+    if (!m_progManager.areProgramsValid()){
       waitEvents();
       return;
     }
 
     {
       NV_PROFILE_SECTION("Setup");
-      sceneUbo.viewport = uvec2(width,height);
+      m_sceneUbo.viewport = uvec2(width,height);
 
       nv_math::mat4 projection = nv_math::perspective(45.f, float(width)/float(height), 0.1f, 1000.0f);
       nv_math::mat4 view = m_control.m_viewMatrix;
 
-      sceneUbo.viewProjMatrix = projection * view;
-      sceneUbo.viewProjMatrixI = nv_math::invert(sceneUbo.viewProjMatrix);
-      sceneUbo.viewMatrix = view;
-      sceneUbo.viewMatrixI = nv_math::invert(view);
-      sceneUbo.viewMatrixIT = nv_math::transpose(sceneUbo.viewMatrixI );
-      sceneUbo.wLightPos = vec4(tweak.lightDir * float(grid),1.0f);
-      sceneUbo.time = float(time);
+      m_sceneUbo.viewProjMatrix = projection * view;
+      m_sceneUbo.viewProjMatrixI = nv_math::invert(m_sceneUbo.viewProjMatrix);
+      m_sceneUbo.viewMatrix = view;
+      m_sceneUbo.viewMatrixI = nv_math::invert(view);
+      m_sceneUbo.viewMatrixIT = nv_math::transpose(m_sceneUbo.viewMatrixI );
+      m_sceneUbo.wLightPos = vec4(m_tweak.lightDir * float(grid),1.0f);
+      m_sceneUbo.time = float(time);
 
-      glNamedBufferSubDataEXT(buffers.scene_ubo,0,sizeof(SceneData),&sceneUbo);
+      glNamedBufferSubData(buffers.scene_ubo,0,sizeof(SceneData),&m_sceneUbo);
 
       glBindFramebuffer(GL_FRAMEBUFFER, fbos.scene);
       glViewport(0, 0, width, height);
@@ -990,7 +1020,7 @@ namespace basiccmdlist
     {
       NV_PROFILE_SECTION("Draw");
 
-      switch(tweak.mode){
+      switch(m_tweak.mode){
       case DRAW_STANDARD:
         drawStandard();
         break;
@@ -1017,14 +1047,16 @@ namespace basiccmdlist
     }
 
     {
-      NV_PROFILE_SECTION("TwDraw");
-      TwDraw();
+      NV_PROFILE_SECTION("GUI");
+      ImGui::Render();
+      ImGui::RenderDrawDataGL(ImGui::GetDrawData());
     }
+
+    ImGui::EndFrame();
   }
 
   void Sample::resize(int width, int height)
   {
-    TwWindowSize(width,height);
     initFramebuffers(width,height);
   }
 
@@ -1047,9 +1079,9 @@ namespace basiccmdlist
     glBindBufferBase(GL_UNIFORM_BUFFER, UBO_SCENE,  buffers.scene_ubo);
 
     GLuint lastProg = 0;
-    for (int i = 0; i < objects.size(); i++){
-      const ObjectInfo&  obj = objects[i];
-      GLuint usedProg = progManager.get( obj.program);
+    for (int i = 0; i < m_sceneObjects.size(); i++){
+      const ObjectInfo&  obj = m_sceneObjects[i];
+      GLuint usedProg = m_progManager.get( obj.program);
 
       if (usedProg != lastProg || !USE_PROGRAM_FILTER){
         // simple redundancy tracker
@@ -1108,7 +1140,7 @@ namespace basiccmdlist
 #if ALLOW_EMULATION_LAYER
   void Sample::drawTokenEmulation()
   {
-    if (bindlessVboUbo){
+    if (m_bindlessVboUbo){
       glEnableClientState(GL_VERTEX_ATTRIB_ARRAY_UNIFIED_NV);
       glEnableClientState(GL_ELEMENT_ARRAY_UNIFIED_NV);
       glEnableClientState(GL_UNIFORM_BUFFER_UNIFIED_NV);
@@ -1131,7 +1163,7 @@ namespace basiccmdlist
       GLuint(cmdlist.tokenSequenceEmu.offsets.size()),
       cmdlist.statesystem);
 
-    if (bindlessVboUbo){
+    if (m_bindlessVboUbo){
       glDisableClientState(GL_VERTEX_ATTRIB_ARRAY_UNIFIED_NV);
       glDisableClientState(GL_ELEMENT_ARRAY_UNIFIED_NV);
       glDisableClientState(GL_UNIFORM_BUFFER_UNIFIED_NV);
@@ -1148,6 +1180,7 @@ using namespace basiccmdlist;
 
 int sample_main(int argc, const char** argv)
 {
+  SETLOGFILENAME();
   Sample sample;
   return sample.run(
     PROJECT_NAME,

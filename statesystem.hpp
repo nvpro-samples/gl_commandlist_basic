@@ -1,27 +1,30 @@
-/*-----------------------------------------------------------------------
-  Copyright (c) 2014, NVIDIA. All rights reserved.
+/* Copyright (c) 2014-2018, NVIDIA CORPORATION. All rights reserved.
+*
+* Redistribution and use in source and binary forms, with or without
+* modification, are permitted provided that the following conditions
+* are met:
+*  * Redistributions of source code must retain the above copyright
+*    notice, this list of conditions and the following disclaimer.
+*  * Redistributions in binary form must reproduce the above copyright
+*    notice, this list of conditions and the following disclaimer in the
+*    documentation and/or other materials provided with the distribution.
+*  * Neither the name of NVIDIA CORPORATION nor the names of its
+*    contributors may be used to endorse or promote products derived
+*    from this software without specific prior written permission.
+*
+* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ``AS IS'' AND ANY
+* EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+* IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+* PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+* CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+* EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+* PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+* PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
+* OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+* (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+* OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
 
-  Redistribution and use in source and binary forms, with or without
-  modification, are permitted provided that the following conditions
-  are met:
-   * Redistributions of source code must retain the above copyright
-     notice, this list of conditions and the following disclaimer.
-   * Neither the name of its contributors may be used to endorse 
-     or promote products derived from this software without specific
-     prior written permission.
-
-  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ``AS IS'' AND ANY
-  EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
-  PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR
-  CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
-  EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
-  PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
-  PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
-  OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
------------------------------------------------------------------------*/
 /* Contact ckubisch@nvidia.com (Christoph Kubisch) for feedback */
 
 
@@ -29,7 +32,7 @@
 #define STATESYSTEM_H__
 
 
-#include <GL/glew.h>
+#include <nv_helpers_gl/extensions_gl.hpp>
 #include <vector>
 
 class StateSystem {
@@ -37,33 +40,33 @@ public:
 
   static inline bool isBitSet(GLbitfield bits, GLuint key)
   {
-    return  (bits & (1<<key)) ? true : false;
+    return  (bits & (1 << key)) ? true : false;
   }
 
   static inline void setBit(GLbitfield& bits, GLuint key)
   {
-    bits |= (1<<key);
+    bits |= (1 << key);
   }
 
   static GLbitfield getBit(GLuint key)
   {
-    return (1<<key);
+    return (1 << key);
   }
 
   static inline GLboolean setBitState(GLbitfield& bits, GLuint key, GLboolean state)
   {
-    if (state)  bits |=  (1<<key);
-    else        bits &= ~(1<<key);
+    if (state)  bits |= (1 << key);
+    else        bits &= ~(1 << key);
     return state;
   }
-  
-  static const GLuint MAX_DRAWBUFFERS    = 8;
-  static const GLuint MAX_CLIPPLANES     = 8;
-  static const GLuint MAX_VIEWPORTS      = 16;
-  static const GLuint MAX_VERTEXATTRIBS  = 16;
+
+  static const GLuint MAX_DRAWBUFFERS = 8;
+  static const GLuint MAX_CLIPPLANES = 8;
+  static const GLuint MAX_VIEWPORTS = 16;
+  static const GLuint MAX_VERTEXATTRIBS = 16;
   static const GLuint MAX_VERTEXBINDINGS = 16;
-  static const GLuint MAX_COLORS         = 4;
-    
+  static const GLuint MAX_COLORS = 4;
+
   enum StateBits {
     BLEND,
     COLOR_LOGIC_OP,
@@ -92,7 +95,7 @@ public:
     PROGRAM_POINT_SIZE,
     NUM_STATEBITS,
   };
-
+#if STATESYSTEM_USE_DEPRECATED
   enum StateBitsDepr {
     DEPR_ALPHA_TEST,
     DEPR_LINE_STIPPLE,
@@ -101,8 +104,8 @@ public:
     DEPR_POLYGON_STIPPLE,
     NUM_STATEBITSDEPR,
   };
+#endif
 
-    
   enum Faces {
     FACE_FRONT,
     FACE_BACK,
@@ -124,21 +127,21 @@ public:
   };
 
   //////////////////////////////////////////////////////////////////////////
-
+#if STATESYSTEM_USE_DEPRECATED
   struct AlphaStateDepr {
     GLenum    mode;
     GLfloat   refvalue;
 
     AlphaStateDepr()
     {
-      mode      = GL_ALWAYS;
-      refvalue  = 1.0;
+      mode = GL_ALWAYS;
+      refvalue = 1.0;
     }
 
     void applyGL() const;
     void getGL();
   };
-
+#endif
   //////////////////////////////////////////////////////////////////////////
 
   struct StencilOp
@@ -153,13 +156,13 @@ public:
     GLuint  refvalue;
     GLuint  mask;
   };
-  struct StencilState{
+  struct StencilState {
     StencilFunc funcs[MAX_FACES];
     StencilOp   ops[MAX_FACES];
 
     StencilState()
     {
-      for (GLuint i = 0; i < MAX_FACES; i++){
+      for (GLuint i = 0; i < MAX_FACES; i++) {
         funcs[i].func = GL_ALWAYS;
         funcs[i].refvalue = 0;
         funcs[i].mask = ~0;
@@ -171,28 +174,28 @@ public:
   };
 
   //////////////////////////////////////////////////////////////////////////
-  struct BlendMode{
+  struct BlendMode {
     GLenum srcw;
     GLenum dstw;
     GLenum equ;
   };
-  struct BlendStage{
+  struct BlendStage {
     BlendMode rgb;
     BlendMode alpha;
   };
-  struct BlendState{
+  struct BlendState {
     GLbitfield  separateEnable; // only set this if you want per draw enable
-    //GLfloat     color[4];
+                                //GLfloat     color[4];
     GLuint      useSeparate;    // if set uses per draw, otherwise first
     BlendStage  blends[MAX_DRAWBUFFERS];
 
     BlendState() {
       separateEnable = 0;
       useSeparate = GL_FALSE;
-      for (GLuint i = 0; i < MAX_DRAWBUFFERS; i++){
+      for (GLuint i = 0; i < MAX_DRAWBUFFERS; i++) {
         blends[i].alpha.srcw = GL_ONE;
         blends[i].alpha.dstw = GL_ZERO;
-        blends[i].alpha.equ  = GL_FUNC_ADD;
+        blends[i].alpha.equ = GL_FUNC_ADD;
         blends[i].rgb = blends[i].alpha;
       }
     }
@@ -201,7 +204,7 @@ public:
     void getGL();
   };
   //////////////////////////////////////////////////////////////////////////
-  
+
   struct DepthState {
     GLenum  func;
     // depth bounds for NV?
@@ -214,7 +217,7 @@ public:
     void getGL();
   };
   //////////////////////////////////////////////////////////////////////////
-  
+
   struct LogicState {
     GLenum  op;
 
@@ -226,14 +229,14 @@ public:
     void getGL();
   };
   //////////////////////////////////////////////////////////////////////////
-  
+
   struct RasterState {
     //GLenum    frontFace;
     GLenum    cullFace;
     //GLfloat   polyOffsetFactor;
     //GLfloat   polyOffsetUnits;
     GLenum    polyMode;   // front and back, no separate support
-    //GLfloat   lineWidth;
+                          //GLfloat   lineWidth;
     GLfloat   pointSize;
     GLfloat   pointFade;
     GLenum    pointSpriteOrigin;
@@ -254,6 +257,7 @@ public:
     void getGL();
   };
 
+#if STATESYSTEM_USE_DEPRECATED
   struct RasterStateDepr {
     GLint     lineStippleFactor;
     GLushort  lineStipplePattern;
@@ -261,14 +265,15 @@ public:
     // ignore polygonStipple
 
     RasterStateDepr() {
-      lineStippleFactor   = 1;
-      lineStipplePattern  = ~0;
-      shadeModel  = GL_SMOOTH;
+      lineStippleFactor = 1;
+      lineStipplePattern = ~0;
+      shadeModel = GL_SMOOTH;
     }
 
     void applyGL() const;
     void getGL();
   };
+#endif
 
   //////////////////////////////////////////////////////////////////////////
 
@@ -324,21 +329,21 @@ public:
 
   /*
   struct ViewportState {
-    GLuint        useSeparate;  // if set uses per view, otherwise first
-    Viewport      viewports[MAX_VIEWPORTS];
+  GLuint        useSeparate;  // if set uses per view, otherwise first
+  Viewport      viewports[MAX_VIEWPORTS];
 
-    ViewportState() {
-      useSeparate = GL_FALSE;
-      for (GLuint i = 0; i < MAX_VIEWPORTS; i++){
-        viewports[i].x = 0;
-        viewports[i].y = 0;
-        viewports[i].width = 0;
-        viewports[i].height = 0;
-      }
-    }
+  ViewportState() {
+  useSeparate = GL_FALSE;
+  for (GLuint i = 0; i < MAX_VIEWPORTS; i++){
+  viewports[i].x = 0;
+  viewports[i].y = 0;
+  viewports[i].width = 0;
+  viewports[i].height = 0;
+  }
+  }
 
-    void applyGL() const;
-    void getGL();
+  void applyGL() const;
+  void getGL();
   };
   */
 
@@ -348,9 +353,9 @@ public:
 
     DepthRangeState() {
       useSeparate = GL_FALSE;
-      for (GLuint i = 0; i < MAX_VIEWPORTS; i++){
+      for (GLuint i = 0; i < MAX_VIEWPORTS; i++) {
         depths[i].nearPlane = 0;
-        depths[i].farPlane  = 1;
+        depths[i].farPlane = 1;
       }
     }
 
@@ -360,21 +365,21 @@ public:
 
   /*
   struct ScissorState {
-    GLuint        useSeparate;    // if set uses per draw, otherwise first
-    Scissor       scissor[MAX_VIEWPORTS];
+  GLuint        useSeparate;    // if set uses per draw, otherwise first
+  Scissor       scissor[MAX_VIEWPORTS];
 
-    ScissorState() {
-      useSeparate = GL_FALSE;
-      for (GLuint i = 0; i < MAX_VIEWPORTS; i++){
-        scissor[i].x = 0;
-        scissor[i].y = 0;
-        scissor[i].width = 0;
-        scissor[i].height = 0;
-      }
-    }
+  ScissorState() {
+  useSeparate = GL_FALSE;
+  for (GLuint i = 0; i < MAX_VIEWPORTS; i++){
+  scissor[i].x = 0;
+  scissor[i].y = 0;
+  scissor[i].width = 0;
+  scissor[i].height = 0;
+  }
+  }
 
-    void applyGL() const;
-    void getGL();
+  void applyGL() const;
+  void getGL();
   };
   */
 
@@ -402,8 +407,8 @@ public:
       depth = GL_TRUE;
       stencil[FACE_FRONT] = ~0;
       stencil[FACE_BACK] = ~0;
-      for (GLuint i = 0; i < MAX_DRAWBUFFERS; i++){
-        for (GLuint c = 0; c < MAX_COLORS; c++){
+      for (GLuint i = 0; i < MAX_DRAWBUFFERS; i++) {
+        for (GLuint c = 0; c < MAX_COLORS; c++) {
           colormask[i][c] = GL_TRUE;
         }
       }
@@ -414,7 +419,7 @@ public:
   };
 
   //////////////////////////////////////////////////////////////////////////
-  
+
   struct FBOState {
     GLuint  fboDraw;
     GLuint  fboRead;
@@ -426,14 +431,14 @@ public:
       fboDraw = 0;
       fboRead = 0;
       readBuffer = GL_BACK;
-      for (GLuint i = 0; i < MAX_DRAWBUFFERS; i++){
+      for (GLuint i = 0; i < MAX_DRAWBUFFERS; i++) {
         drawBuffers[i] = GL_NONE;
       }
       drawBuffers[0] = GL_BACK;
       numBuffers = 1;
     }
 
-    void setFbo(GLuint fbo){
+    void setFbo(GLuint fbo) {
       fboDraw = fbo;
       fboRead = fbo;
       readBuffer = GL_COLOR_ATTACHMENT0;
@@ -441,7 +446,7 @@ public:
       numBuffers = 1;
     }
 
-    void applyGL(bool noBind=false) const;
+    void applyGL(bool noBind = false) const;
     void getGL();
   };
 
@@ -454,7 +459,7 @@ public:
       enabled = 0;
     }
 
-    void applyGL(GLbitfield changed=~0) const;
+    void applyGL(GLbitfield changed = ~0) const;
     void getGL();
   };
 
@@ -469,7 +474,7 @@ public:
     VertexModeType  mode;
 
     GLboolean normalized;
-    
+
     GLuint    size;
     GLenum    type;
     GLsizei   relativeoffset;
@@ -487,22 +492,22 @@ public:
     VertexBinding bindings[MAX_VERTEXBINDINGS];
 
     VertexFormatState() {
-      for (GLuint i = 0; i < MAX_VERTEXATTRIBS; i++){
-        formats[i].mode           = VERTEXMODE_FLOAT;
-        formats[i].size           = 4;
-        formats[i].type           = GL_FLOAT;
-        formats[i].normalized     = GL_FALSE;
+      for (GLuint i = 0; i < MAX_VERTEXATTRIBS; i++) {
+        formats[i].mode = VERTEXMODE_FLOAT;
+        formats[i].size = 4;
+        formats[i].type = GL_FLOAT;
+        formats[i].normalized = GL_FALSE;
         formats[i].relativeoffset = 0;
-        formats[i].binding        = i;
+        formats[i].binding = i;
       }
 
-      for (GLuint i = 0; i < MAX_VERTEXATTRIBS; i++){
+      for (GLuint i = 0; i < MAX_VERTEXATTRIBS; i++) {
         bindings[i].divisor = 0;
-        bindings[i].stride  = 0;
+        bindings[i].stride = 0;
       }
     }
 
-    void applyGL(GLbitfield changedFormat = ~0,GLbitfield changedBinding = ~0) const;
+    void applyGL(GLbitfield changedFormat = ~0, GLbitfield changedBinding = ~0) const;
     void getGL();
   };
 
@@ -519,7 +524,7 @@ public:
     VertexData  data[MAX_VERTEXATTRIBS];
 
     VertexImmediateState() {
-      for (GLuint i = 0; i < MAX_VERTEXATTRIBS; i++){
+      for (GLuint i = 0; i < MAX_VERTEXATTRIBS; i++) {
         data[i].mode = VERTEXMODE_FLOAT;
         data[i].floats[0] = 0;
         data[i].floats[1] = 0;
@@ -560,6 +565,7 @@ public:
     void getGL();
   };
 
+#if STATESYSTEM_USE_DEPRECATED
   struct EnableStateDepr {
     GLbitfield      stateBitsDepr;
 
@@ -570,15 +576,20 @@ public:
     void applyGL(GLbitfield changed = ~0) const;
     void getGL();
   };
+#endif
 
   //////////////////////////////////////////////////////////////////////////
-  
+
   struct State {
     EnableState           enable;
+#if STATESYSTEM_USE_DEPRECATED
     EnableStateDepr       enableDepr;
+#endif
     ProgramState          program;
     ClipDistanceState     clip;
+#if STATESYSTEM_USE_DEPRECATED
     AlphaStateDepr        alpha;
+#endif
     BlendState            blend;
     DepthState            depth;
     StencilState          stencil;
@@ -586,7 +597,9 @@ public:
     PrimitiveState        primitive;
     SampleState           sample;
     RasterState           raster;
+#if STATESYSTEM_USE_DEPRECATED
     RasterStateDepr       rasterDepr;
+#endif
     //ViewportState         viewport;
     DepthRangeState       depthrange;
     //ScissorState          scissor;
@@ -600,39 +613,39 @@ public:
     // This value only exists to ease compatibility with NV_command_list
     // and is unaffected by apply or get operations, its value
     // is set during StateSystem::set
-    GLenum                basePrimitiveMode; 
+    GLenum                basePrimitiveMode;
 
-    State() 
+    State()
       : basePrimitiveMode(GL_TRIANGLES)
     {
 
     }
 
-    void    applyGL(bool coreonly=false, bool skipFboBinding=false) const;
-    void    getGL(bool coreonly=false);
+    void    applyGL(bool coreonly = false, bool skipFboBinding = false) const;
+    void    getGL(bool coreonly = false);
   };
-  
+
   typedef unsigned int StateID;
   static const StateID  INVALID_ID = ~0;
 
-  void    init(bool coreonly=false);
+  void    init(bool coreonly = false);
   void    deinit();
-  
+
   void    generate(GLuint num, StateID* objects);
-  void    destroy( GLuint num, const StateID* objects );
+  void    destroy(GLuint num, const StateID* objects);
   void          set(StateID id, const State& state, GLenum basePrimitiveMode);
   const State&  get(StateID id) const;
-  
+
   void    applyGL(StateID id, bool skipFboBinding) const;         // brute force sets everything
-  void    applyGL(StateID id, StateID prev,bool skipFboBinding);  // tries to avoid redundant, can pass INVALID_ID as previous
+  void    applyGL(StateID id, StateID prev, bool skipFboBinding);  // tries to avoid redundant, can pass INVALID_ID as previous
 
   void    prepareTransition(StateID id, StateID prev); // can speed up state apply
-  
-  
+
+
 private:
   static const int MAX_DIFFS = 16;
 
-  struct StateDiffKey{
+  struct StateDiffKey {
     StateID   state;
     GLuint    incarnation;
   };
@@ -676,7 +689,7 @@ private:
   struct StateInternal {
     State       state;
     GLuint      incarnation;
-    
+
     int           usedDiff;
     StateDiffKey  others[MAX_DIFFS];
     StateDiff     diffs[MAX_DIFFS];
@@ -692,7 +705,7 @@ private:
 
   void  makeDiff(StateDiff& diff, const StateInternal &fromInternal, const StateInternal &toInternal);
   void  applyDiffGL(const StateDiff& diff, const State &to, bool skipFboBinding);
-  int   prepareTransitionCache(StateID prev, StateInternal& to );
+  int   prepareTransitionCache(StateID prev, StateInternal& to);
 };
 
 
