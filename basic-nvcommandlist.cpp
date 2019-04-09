@@ -32,31 +32,31 @@
 #define USE_PROGRAM_FILTER        1
 #define ALLOW_EMULATION_LAYER     1
 
-#include <nv_helpers_gl/extensions_gl.hpp>
+#include <nvgl/extensions_gl.hpp>
 
 #include <imgui/imgui_helper.h>
 #include <imgui/imgui_impl_gl.h>
 
-#include <nv_math/nv_math_glsltypes.h>
-#include <nv_helpers_gl/glsltypes_gl.hpp>
+#include <nvmath/nvmath_glsltypes.h>
+#include <nvgl/glsltypes_gl.hpp>
 
-#include <nv_helpers/geometry.hpp>
-#include <nv_helpers/misc.hpp>
-#include <nv_helpers/cameracontrol.hpp>
+#include <nvh/geometry.hpp>
+#include <nvh/misc.hpp>
+#include <nvh/cameracontrol.hpp>
 
-#include <nv_helpers_gl/appwindowprofiler_gl.hpp>
-#include <nv_helpers_gl/error_gl.hpp>
-#include <nv_helpers_gl/programmanager_gl.hpp>
-#include <nv_helpers_gl/base_gl.hpp>
+#include <nvgl/appwindowprofiler_gl.hpp>
+#include <nvgl/error_gl.hpp>
+#include <nvgl/programmanager_gl.hpp>
+#include <nvgl/base_gl.hpp>
 
-#include <nv_helpers/tnulled.hpp>
+#include <nvh/tnulled.hpp>
 
 #include "nvtoken.hpp"
 using namespace nvtoken;
 
-using namespace nv_helpers;
-using namespace nv_helpers_gl;
-using namespace nv_math;
+using namespace nvh;
+using namespace nvgl;
+using namespace nvmath;
 #include "common.h"
 
 
@@ -72,7 +72,7 @@ namespace basiccmdlist
   static const int grid = 64;
   static const float globalscale = 8.0f;
 
-  class Sample : public nv_helpers_gl::AppWindowProfilerGL
+  class Sample : public nvgl::AppWindowProfilerGL
   {
 
     enum DrawMode {
@@ -89,7 +89,7 @@ namespace basiccmdlist
     } programs;
 
     struct {
-      nv_helpers::TNulled<GLuint>
+      nvh::TNulled<GLuint>
         scene_color,
         scene_depthstencil,
         color;
@@ -103,12 +103,12 @@ namespace basiccmdlist
     }texturesADDR;
 
     struct {
-      nv_helpers::TNulled<GLuint>
+      nvh::TNulled<GLuint>
         scene;
     }fbos;
 
     struct {
-      nv_helpers::TNulled<GLuint>
+      nvh::TNulled<GLuint>
         box_vbo,
         box_ibo,
         sphere_vbo,
@@ -139,9 +139,9 @@ namespace basiccmdlist
         uv        = vec2(vertex.texcoord);
       }
 
-      nv_math::vec4     position;
+      nvmath::vec4     position;
       short             normal[4];
-      nv_math::vec2     uv;
+      nvmath::vec2     uv;
     };
 
     struct ObjectInfo {
@@ -204,6 +204,7 @@ namespace basiccmdlist
     struct Tweak {
       DrawMode    mode = DRAW_STANDARD;
       vec3        lightDir;
+      float       animate = 1.0f;
     };
 
     ProgramManager          m_progManager;
@@ -248,7 +249,7 @@ namespace basiccmdlist
     void end() {
       ImGui::ShutdownGL();
     }
-    // return true to prevent m_window updates
+    // return true to prevent m_windowState updates
     bool mouse_pos(int x, int y) {
       return ImGuiH::mouse_pos(x, y);
     }
@@ -265,6 +266,13 @@ namespace basiccmdlist
       return ImGuiH::key_button(button, action, mods);
     }
 
+  public:
+    Sample()
+    {
+      m_parameterList.add("drawmode", (uint32_t*)&m_tweak.mode);
+      m_parameterList.add("animate", &m_tweak.animate);
+    }
+
   };
 
   bool Sample::initProgram()
@@ -273,7 +281,7 @@ namespace basiccmdlist
     m_progManager.m_filetype = ShaderFileManager::FILETYPE_GLSL;
     m_progManager.addDirectory( std::string(PROJECT_NAME));
     m_progManager.addDirectory( sysExePath() + std::string(PROJECT_RELDIRECTORY));
-    m_progManager.addDirectory( std::string(PROJECT_ABSDIRECTORY));
+    // m_progManager.addDirectory( std::string(PROJECT_ABSDIRECTORY));
 
     m_progManager.registerInclude("common.h", "common.h");
 
@@ -338,13 +346,13 @@ namespace basiccmdlist
     {
       // pattern texture
       int size = 32;
-      std::vector<nv_math::vector4<unsigned char> >  texels;
+      std::vector<nvmath::vector4<unsigned char> >  texels;
       texels.resize(size * size);
 
       for (int y = 0; y < size; y++){
         for (int x = 0; x < size; x++){
           int pos = x + y * size;
-          nv_math::vector4<unsigned char> texel;
+          nvmath::vector4<unsigned char> texel;
 
           texel[0] = (( x + y ^ 127 ) & 15) * 17;
           texel[1] = (( x + y ^ 127 ) & 31) * 8;
@@ -423,10 +431,10 @@ namespace basiccmdlist
 
         float angle = frand() * 180.f;
 
-        ubodata.worldMatrix =  nv_math::translation_mat4(pos) *
-          nv_math::scale_mat4(vec3(scale)) *
-          nv_math::rotation_mat4_x(angle);
-        ubodata.worldMatrixIT = nv_math::transpose(nv_math::invert(ubodata.worldMatrix));
+        ubodata.worldMatrix =  nvmath::translation_mat4(pos) *
+          nvmath::scale_mat4(vec3(scale)) *
+          nvmath::rotation_mat4_x(angle);
+        ubodata.worldMatrixIT = nvmath::transpose(nvmath::invert(ubodata.worldMatrix));
         ubodata.texScale.x = rand() % 2 + 1.0f;
         ubodata.texScale.y = rand() % 2 + 1.0f;
         ubodata.color      = vec4(frand(),frand(),frand(),1.0f);
@@ -902,7 +910,7 @@ namespace basiccmdlist
 
   bool Sample::begin()
   {
-    ImGuiH::Init(m_window.m_viewsize[0], m_window.m_viewsize[1], this);
+    ImGuiH::Init(m_windowState.m_viewSize[0], m_windowState.m_viewSize[1], this);
     ImGui::InitGL();
 
     if (!has_GL_ARB_bindless_texture){
@@ -910,7 +918,7 @@ namespace basiccmdlist
       return false;
     }
 
-    m_bindlessVboUbo = has_GL_NV_vertex_buffer_unified_memory && sysExtensionSupportedGL("GL_NV_uniform_buffer_unified_memory");
+    m_bindlessVboUbo = has_GL_NV_vertex_buffer_unified_memory && m_contextWindow.extensionSupported("GL_NV_uniform_buffer_unified_memory");
 
     bool validated(true);
 
@@ -919,7 +927,7 @@ namespace basiccmdlist
     glBindVertexArray(defaultVAO);
 
     validated = validated && initProgram();
-    validated = validated && initFramebuffers(m_window.m_viewsize[0],m_window.m_viewsize[1]);
+    validated = validated && initFramebuffers(m_windowState.m_viewSize[0],m_windowState.m_viewSize[1]);
     validated = validated && initScene();
 #if ALLOW_EMULATION_LAYER
     validated = validated && initCommandList();
@@ -942,7 +950,7 @@ namespace basiccmdlist
 
     m_control.m_sceneOrbit      = vec3(0.0f);
     m_control.m_sceneDimension  = float(grid) * 0.2f;
-    m_control.m_viewMatrix      = nv_math::look_at(m_control.m_sceneOrbit - vec3(0,0,-m_control.m_sceneDimension), m_control.m_sceneOrbit, vec3(0,1,0));
+    m_control.m_viewMatrix      = nvmath::look_at(m_control.m_sceneOrbit - vec3(0,0,-m_control.m_sceneDimension), m_control.m_sceneOrbit, vec3(0,1,0));
 
     m_sceneUbo.shrinkFactor = 0.5f;
 
@@ -952,8 +960,8 @@ namespace basiccmdlist
   void Sample::processUI(double time)
   {
 
-    int width = m_window.m_viewsize[0];
-    int height = m_window.m_viewsize[1];
+    int width = m_windowState.m_viewSize[0];
+    int height = m_windowState.m_viewSize[1];
 
     // Update imgui configuration
     auto &imgui_io = ImGui::GetIO();
@@ -973,16 +981,18 @@ namespace basiccmdlist
 
   void Sample::think(double time)
   {
+    NV_PROFILE_GL_SECTION("Frame");
+
     processUI(time);
 
-    m_control.processActions(m_window.m_viewsize,
-      nv_math::vec2f(m_window.m_mouseCurrent[0],m_window.m_mouseCurrent[1]),
-      m_window.m_mouseButtonFlags, m_window.m_wheel);
+    m_control.processActions(m_windowState.m_viewSize,
+      nvmath::vec2f(m_windowState.m_mouseCurrent[0],m_windowState.m_mouseCurrent[1]),
+      m_windowState.m_mouseButtonFlags, m_windowState.m_mouseWheel);
 
-    int width   = m_window.m_viewsize[0];
-    int height  = m_window.m_viewsize[1];
+    int width   = m_windowState.m_viewSize[0];
+    int height  = m_windowState.m_viewSize[1];
 
-    if (m_window.onPress(KEY_R)){
+    if (m_windowState.onPress(KEY_R)){
       m_progManager.reloadPrograms();
       cmdlist.state.programIncarnation++;
     }
@@ -992,33 +1002,33 @@ namespace basiccmdlist
     }
 
     {
-      NV_PROFILE_SECTION("Setup");
+      NV_PROFILE_GL_SECTION("Setup");
       m_sceneUbo.viewport = uvec2(width,height);
 
-      nv_math::mat4 projection = nv_math::perspective(45.f, float(width)/float(height), 0.1f, 1000.0f);
-      nv_math::mat4 view = m_control.m_viewMatrix;
+      nvmath::mat4 projection = nvmath::perspective(45.f, float(width)/float(height), 0.1f, 1000.0f);
+      nvmath::mat4 view = m_control.m_viewMatrix;
 
       m_sceneUbo.viewProjMatrix = projection * view;
-      m_sceneUbo.viewProjMatrixI = nv_math::invert(m_sceneUbo.viewProjMatrix);
+      m_sceneUbo.viewProjMatrixI = nvmath::invert(m_sceneUbo.viewProjMatrix);
       m_sceneUbo.viewMatrix = view;
-      m_sceneUbo.viewMatrixI = nv_math::invert(view);
-      m_sceneUbo.viewMatrixIT = nv_math::transpose(m_sceneUbo.viewMatrixI );
+      m_sceneUbo.viewMatrixI = nvmath::invert(view);
+      m_sceneUbo.viewMatrixIT = nvmath::transpose(m_sceneUbo.viewMatrixI );
       m_sceneUbo.wLightPos = vec4(m_tweak.lightDir * float(grid),1.0f);
-      m_sceneUbo.time = float(time);
+      m_sceneUbo.time = float(time) * m_tweak.animate;
 
       glNamedBufferSubData(buffers.scene_ubo,0,sizeof(SceneData),&m_sceneUbo);
 
       glBindFramebuffer(GL_FRAMEBUFFER, fbos.scene);
       glViewport(0, 0, width, height);
 
-      nv_math::vec4   bgColor(0.2,0.2,0.2,0.0);
+      nvmath::vec4   bgColor(0.2,0.2,0.2,0.0);
       glClearColor(bgColor.x,bgColor.y,bgColor.z,bgColor.w);
       glClearDepth(1.0);
       glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
     }
 
     {
-      NV_PROFILE_SECTION("Draw");
+      NV_PROFILE_GL_SECTION("Draw");
 
       switch(m_tweak.mode){
       case DRAW_STANDARD:
@@ -1039,7 +1049,7 @@ namespace basiccmdlist
     }
 
     {
-      NV_PROFILE_SECTION("Blit");
+      NV_PROFILE_GL_SECTION("Blit");
       glBindFramebuffer(GL_READ_FRAMEBUFFER, fbos.scene);
       glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
       glBlitFramebuffer(0,0,width,height,
@@ -1047,7 +1057,7 @@ namespace basiccmdlist
     }
 
     {
-      NV_PROFILE_SECTION("GUI");
+      NV_PROFILE_GL_SECTION("GUI");
       ImGui::Render();
       ImGui::RenderDrawDataGL(ImGui::GetDrawData());
     }
@@ -1178,18 +1188,14 @@ namespace basiccmdlist
 
 using namespace basiccmdlist;
 
-int sample_main(int argc, const char** argv)
+int main(int argc, const char** argv)
 {
-  SETLOGFILENAME();
+  NVPWindow::System system(argv[0], PROJECT_NAME);
+
   Sample sample;
   return sample.run(
     PROJECT_NAME,
     argc, argv,
-    SAMPLE_SIZE_WIDTH, SAMPLE_SIZE_HEIGHT,
-    SAMPLE_MAJOR_VERSION, SAMPLE_MINOR_VERSION);
+    SAMPLE_SIZE_WIDTH, SAMPLE_SIZE_HEIGHT);
 }
 
-void sample_print(int level, const char * fmt)
-{
-
-}
