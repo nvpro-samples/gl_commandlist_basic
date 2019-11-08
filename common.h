@@ -42,6 +42,8 @@
 #ifdef __cplusplus
 namespace basiccmdlist
 {
+  using namespace nvmath;
+  using namespace nvgl;
 #endif
 
 struct SceneData {

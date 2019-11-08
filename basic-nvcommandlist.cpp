@@ -49,16 +49,10 @@
 #include <nvgl/programmanager_gl.hpp>
 #include <nvgl/base_gl.hpp>
 
-#include <nvh/tnulled.hpp>
-
 #include "nvtoken.hpp"
-using namespace nvtoken;
-
-using namespace nvh;
-using namespace nvgl;
-using namespace nvmath;
 #include "common.h"
 
+using namespace nvtoken;
 
 namespace basiccmdlist
 {
@@ -83,16 +77,16 @@ namespace basiccmdlist
     };
 
     struct {
-      ProgramManager::ProgramID
+      nvgl::ProgramID
         draw_scene,
         draw_scene_geo;
     } programs;
 
     struct {
-      nvh::TNulled<GLuint>
-        scene_color,
-        scene_depthstencil,
-        color;
+      
+      GLuint   scene_color = 0;
+      GLuint   scene_depthstencil = 0;
+      GLuint   color = 0;
     }textures;
 
     struct {
@@ -103,19 +97,17 @@ namespace basiccmdlist
     }texturesADDR;
 
     struct {
-      nvh::TNulled<GLuint>
-        scene;
+      GLuint   scene = 0;
     }fbos;
 
     struct {
-      nvh::TNulled<GLuint>
-        box_vbo,
-        box_ibo,
-        sphere_vbo,
-        sphere_ibo,
-
-        scene_ubo,
-        objects_ubo;
+      GLuint   box_vbo = 0;
+      GLuint   box_ibo = 0;
+      GLuint   sphere_vbo = 0;
+      GLuint   sphere_ibo = 0;
+      
+      GLuint   scene_ubo = 0;
+      GLuint   objects_ubo = 0;
     } buffers;
 
     struct {
@@ -131,7 +123,7 @@ namespace basiccmdlist
 
     struct Vertex {
 
-      Vertex(const geometry::Vertex& vertex){
+      Vertex(const nvh::geometry::Vertex& vertex){
         position  = vertex.position;
         normal[0] = short(vertex.normal.x * float(32767));
         normal[1] = short(vertex.normal.y * float(32767));
@@ -150,35 +142,35 @@ namespace basiccmdlist
       GLuint64  vboADDR;
       GLuint64  iboADDR;
       GLuint    numIndices;
-      ProgramManager::ProgramID    program;
+      nvgl::ProgramID    program;
     };
 
     // COMMANDLIST
-    struct StateIncarnation {
-      uint  programIncarnation;
-      uint  fboIncarnation;
+    struct StateChangeID {
+      uint  programChangeID;
+      uint  fboChangeID;
 
-      bool operator ==(const StateIncarnation& other) const
+      bool operator ==(const StateChangeID& other) const
       {
-        return memcmp(this,&other,sizeof(StateIncarnation)) == 0;
+        return memcmp(this,&other,sizeof(StateChangeID)) == 0;
       }
 
-      bool operator !=(const StateIncarnation& other) const
+      bool operator !=(const StateChangeID& other) const
       {
-        return memcmp(this,&other,sizeof(StateIncarnation)) != 0;
+        return memcmp(this,&other,sizeof(StateChangeID)) != 0;
       }
 
-      StateIncarnation()
-        : programIncarnation(0)
-        , fboIncarnation(0)
+      StateChangeID()
+        : programChangeID(0)
+        , fboChangeID(0)
       {
 
       }
     };
     struct CmdList {
       // we introduce variables that track when we changed global state
-      StateIncarnation  state;
-      StateIncarnation  captured;
+      StateChangeID  state;
+      StateChangeID  captured;
 
       // two state objects
       GLuint                stateobj_draw;
@@ -196,9 +188,9 @@ namespace basiccmdlist
       GLuint          tokenBuffer;
       GLuint          tokenCmdList;
       std::string     tokenData;
-      NVTokenSequence tokenSequence;
-      NVTokenSequence tokenSequenceList;
-      NVTokenSequence tokenSequenceEmu;
+      nvtoken::NVTokenSequence tokenSequence;
+      nvtoken::NVTokenSequence tokenSequenceList;
+      nvtoken::NVTokenSequence tokenSequenceEmu;
     } cmdlist;
 
     struct Tweak {
@@ -207,7 +199,7 @@ namespace basiccmdlist
       float       animate = 1.0f;
     };
 
-    ProgramManager          m_progManager;
+    nvgl::ProgramManager    m_progManager;
 
     ImGuiH::Registry        m_ui;
     double                  m_uiTime;
@@ -220,7 +212,7 @@ namespace basiccmdlist
     bool      m_bindlessVboUbo;
     bool      m_hwsupport;
  
-    CameraControl   m_control;
+    nvh::CameraControl   m_control;
 
     bool begin();
     void processUI(double time);
@@ -278,12 +270,12 @@ namespace basiccmdlist
   bool Sample::initProgram()
   {
     bool validated(true);
-    m_progManager.m_filetype = ShaderFileManager::FILETYPE_GLSL;
+    m_progManager.m_filetype = nvh::ShaderFileManager::FILETYPE_GLSL;
     m_progManager.addDirectory( std::string(PROJECT_NAME));
-    m_progManager.addDirectory( sysExePath() + std::string(PROJECT_RELDIRECTORY));
+    m_progManager.addDirectory( exePath() + std::string(PROJECT_RELDIRECTORY));
     // m_progManager.addDirectory( std::string(PROJECT_ABSDIRECTORY));
 
-    m_progManager.registerInclude("common.h", "common.h");
+    m_progManager.registerInclude("common.h");
 
     programs.draw_scene = m_progManager.createProgram(
       ProgramManager::Definition(GL_VERTEX_SHADER,          "scene.vert.glsl"),
@@ -294,7 +286,7 @@ namespace basiccmdlist
       ProgramManager::Definition(GL_GEOMETRY_SHADER,        "scene.geo.glsl"),
       ProgramManager::Definition(GL_FRAGMENT_SHADER,        "scene.frag.glsl"));
 
-    cmdlist.state.programIncarnation++;
+    cmdlist.state.programChangeID++;
     
     validated = m_progManager.areProgramsValid();
 
@@ -334,7 +326,7 @@ namespace basiccmdlist
       glMakeTextureHandleResidentARB(texturesADDR.scene_depthstencil);
     }
 
-    cmdlist.state.fboIncarnation++;
+    cmdlist.state.fboChangeID++;
 
     return true;
   }
@@ -365,7 +357,7 @@ namespace basiccmdlist
 
       newTexture(textures.color, GL_TEXTURE_2D);
       glBindTexture   (GL_TEXTURE_2D,textures.color);
-      glTexStorage2D  (GL_TEXTURE_2D, mipMapLevels(size), GL_RGBA8, size,size);
+      glTexStorage2D  (GL_TEXTURE_2D, nvh::mipMapLevels(size), GL_RGBA8, size,size);
       glTexSubImage2D (GL_TEXTURE_2D,0,0,0,size,size,GL_RGBA,GL_UNSIGNED_BYTE, &texels[0]);
       glTexParameterf (GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY, 8.0f);
       glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
@@ -380,7 +372,7 @@ namespace basiccmdlist
 
     { // Scene Geometry
 
-      geometry::Box<Vertex>     box;
+      nvh::geometry::Box<Vertex>     box;
       newBuffer(buffers.box_ibo);
       glNamedBufferStorage(buffers.box_ibo, box.getTriangleIndicesSize(), &box.m_indicesTriangles[0], 0);
       newBuffer(buffers.box_vbo);
@@ -394,7 +386,7 @@ namespace basiccmdlist
       }
 
 
-      geometry::Sphere<Vertex>  sphere;
+      nvh::geometry::Sphere<Vertex>  sphere;
       newBuffer(buffers.sphere_ibo);
       glNamedBufferStorage(buffers.sphere_ibo, sphere.getTriangleIndicesSize(), &sphere.m_indicesTriangles[0], 0);
       newBuffer(buffers.sphere_vbo);
@@ -421,15 +413,15 @@ namespace basiccmdlist
       for (int i = 0; i < numObjects; i++){
         ObjectData  ubodata;
 
-        vec3  pos( frand()* float(grid), frand()* float(grid), frand()* float(grid/2) );
+        vec3  pos( nvh::frand()* float(grid), nvh::frand()* float(grid), nvh::frand()* float(grid/2) );
 
         float scale = globalscale/float(grid);
-        scale += (frand()) * 0.25f;
+        scale += (nvh::frand()) * 0.25f;
 
         pos -=  vec3( grid/2, grid/2, grid/4);
         pos /=  float(grid) / globalscale;
 
-        float angle = frand() * 180.f;
+        float angle = nvh::frand() * 180.f;
 
         ubodata.worldMatrix =  nvmath::translation_mat4(pos) *
           nvmath::scale_mat4(vec3(scale)) *
@@ -437,7 +429,7 @@ namespace basiccmdlist
         ubodata.worldMatrixIT = nvmath::transpose(nvmath::invert(ubodata.worldMatrix));
         ubodata.texScale.x = rand() % 2 + 1.0f;
         ubodata.texScale.y = rand() % 2 + 1.0f;
-        ubodata.color      = vec4(frand(),frand(),frand(),1.0f);
+        ubodata.color      = vec4(nvh::frand(),nvh::frand(),nvh::frand(),1.0f);
 
         ubodata.texColor   = texturesADDR.color; // bindless texture used
 
@@ -493,7 +485,7 @@ namespace basiccmdlist
 
   bool Sample::initCommandListMinimal()
   {
-    m_hwsupport = init_NV_command_list(NVPWindow::sysGetProcAddressGL) ? true : false;
+    m_hwsupport = init_NV_command_list(NVPSystem::GetProcAddressGL) ? true : false;
     if (!m_hwsupport) return true;
 
     glCreateStatesNV(1,&cmdlist.stateobj_draw);
@@ -625,7 +617,7 @@ namespace basiccmdlist
   void Sample::updateCommandListStateMinimal()
   {
 
-    if (cmdlist.state.programIncarnation != cmdlist.captured.programIncarnation)
+    if (cmdlist.state.programChangeID != cmdlist.captured.programChangeID)
     {
       // generic state shared by both programs
       glBindFramebuffer(GL_FRAMEBUFFER, fbos.scene);
@@ -667,8 +659,8 @@ namespace basiccmdlist
       glDisable(GL_CULL_FACE);
     }
 
-    if (  cmdlist.state.programIncarnation != cmdlist.captured.programIncarnation ||
-          cmdlist.state.fboIncarnation     != cmdlist.captured.fboIncarnation)
+    if (  cmdlist.state.programChangeID != cmdlist.captured.programChangeID ||
+          cmdlist.state.fboChangeID     != cmdlist.captured.fboChangeID)
     {
       // Because the commandlist object takes all state information 
       // from the objects during compile, we have to update commandlist
@@ -818,7 +810,7 @@ namespace basiccmdlist
   void Sample::updateCommandListState()
   {
     
-    if (cmdlist.state.programIncarnation != cmdlist.captured.programIncarnation)
+    if (cmdlist.state.programChangeID != cmdlist.captured.programChangeID)
     {
       // generic state shared by both programs
       glBindFramebuffer(GL_FRAMEBUFFER, fbos.scene);
@@ -891,8 +883,8 @@ namespace basiccmdlist
     }
 
     if (m_hwsupport && (
-        cmdlist.state.programIncarnation != cmdlist.captured.programIncarnation ||
-        cmdlist.state.fboIncarnation     != cmdlist.captured.fboIncarnation))
+        cmdlist.state.programChangeID != cmdlist.captured.programChangeID ||
+        cmdlist.state.fboChangeID     != cmdlist.captured.fboChangeID))
     {
       // Because the commandlist object takes all state information 
       // from the objects during compile, we have to update commandlist
@@ -994,7 +986,7 @@ namespace basiccmdlist
 
     if (m_windowState.onPress(KEY_R)){
       m_progManager.reloadPrograms();
-      cmdlist.state.programIncarnation++;
+      cmdlist.state.programChangeID++;
     }
     if (!m_progManager.areProgramsValid()){
       waitEvents();
@@ -1190,7 +1182,7 @@ using namespace basiccmdlist;
 
 int main(int argc, const char** argv)
 {
-  NVPWindow::System system(argv[0], PROJECT_NAME);
+  NVPSystem system(argv[0], PROJECT_NAME);
 
   Sample sample;
   return sample.run(
