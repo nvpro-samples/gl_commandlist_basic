@@ -902,7 +902,7 @@ namespace basiccmdlist
 
   bool Sample::begin()
   {
-    ImGuiH::Init(m_windowState.m_viewSize[0], m_windowState.m_viewSize[1], this);
+    ImGuiH::Init(m_windowState.m_winSize[0], m_windowState.m_winSize[1], this);
     ImGui::InitGL();
 
     if (!has_GL_ARB_bindless_texture){
@@ -919,7 +919,7 @@ namespace basiccmdlist
     glBindVertexArray(defaultVAO);
 
     validated = validated && initProgram();
-    validated = validated && initFramebuffers(m_windowState.m_viewSize[0],m_windowState.m_viewSize[1]);
+    validated = validated && initFramebuffers(m_windowState.m_winSize[0],m_windowState.m_winSize[1]);
     validated = validated && initScene();
 #if ALLOW_EMULATION_LAYER
     validated = validated && initCommandList();
@@ -952,8 +952,8 @@ namespace basiccmdlist
   void Sample::processUI(double time)
   {
 
-    int width = m_windowState.m_viewSize[0];
-    int height = m_windowState.m_viewSize[1];
+    int width = m_windowState.m_winSize[0];
+    int height = m_windowState.m_winSize[1];
 
     // Update imgui configuration
     auto &imgui_io = ImGui::GetIO();
@@ -977,12 +977,12 @@ namespace basiccmdlist
 
     processUI(time);
 
-    m_control.processActions(m_windowState.m_viewSize,
+    m_control.processActions(m_windowState.m_winSize,
       nvmath::vec2f(m_windowState.m_mouseCurrent[0],m_windowState.m_mouseCurrent[1]),
       m_windowState.m_mouseButtonFlags, m_windowState.m_mouseWheel);
 
-    int width   = m_windowState.m_viewSize[0];
-    int height  = m_windowState.m_viewSize[1];
+    int width   = m_windowState.m_winSize[0];
+    int height  = m_windowState.m_winSize[1];
 
     if (m_windowState.onPress(KEY_R)){
       m_progManager.reloadPrograms();
