@@ -102,7 +102,7 @@ The emulation layer allows you to roughly get an idea of how the glDrawCommands*
 ![sample screenshot](https://github.com/nvpro-samples/gl_commandlist_basic/blob/master/doc/sample.jpg)
 
 #### Building
-Ideally, clone this and other interesting [nvpro-samples](https://github.com/nvpro-samples) repositories into a common subdirectory. You will always need [shared_sources](https://github.com/nvpro-samples/shared_sources), and on Windows, you will need [shared_external](https://github.com/nvpro-samples/shared_external). The shared directories are searched either as a subdirectory of the sample, or one directory up.
+Ideally, clone this and other interesting [nvpro-samples](https://github.com/nvpro-samples) repositories into a common subdirectory. You will always need [nvpro_core](https://github.com/nvpro-samples/nvpro_core). The nvpro_core is searched either as a subdirectory of the sample, or one directory up.
 
 If you are interested in multiple samples, you can use the [build_all](https://github.com/nvpro-samples/build_all) CMAKE as an entry point. It will also give you options to enable or disable individual samples when creating the solutions.
 
