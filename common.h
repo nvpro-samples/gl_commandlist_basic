@@ -35,7 +35,7 @@
 #ifdef __cplusplus
 namespace basiccmdlist
 {
-  using namespace nvmath;
+  using namespace glm;
   using namespace nvgl;
 #endif
 

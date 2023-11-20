@@ -31,7 +31,6 @@
 #include <imgui/imgui_helper.h>
 
 #include <nvgl/glsltypes_gl.hpp>
-#include <nvmath/nvmath_glsltypes.h>
 
 #include <nvh/cameracontrol.hpp>
 #include <nvh/geometry.hpp>
@@ -122,9 +121,9 @@ class Sample : public nvgl::AppWindowProfilerGL
       uv        = vec2(vertex.texcoord);
     }
 
-    nvmath::vec4 position;
-    short        normal[4];
-    nvmath::vec2 uv;
+    glm::vec4 position;
+    short     normal[4];
+    glm::vec2 uv;
   };
 
   struct ObjectInfo
@@ -255,10 +254,9 @@ bool Sample::initProgram()
   programs.draw_scene = m_progManager.createProgram(ProgramManager::Definition(GL_VERTEX_SHADER, "scene.vert.glsl"),
                                                     ProgramManager::Definition(GL_FRAGMENT_SHADER, "scene.frag.glsl"));
 
-  programs.draw_scene_geo =
-      m_progManager.createProgram(ProgramManager::Definition(GL_VERTEX_SHADER, "scene.vert.glsl"),
-                                  ProgramManager::Definition(GL_GEOMETRY_SHADER, "scene.geo.glsl"),
-                                  ProgramManager::Definition(GL_FRAGMENT_SHADER, "scene.frag.glsl"));
+  programs.draw_scene_geo = m_progManager.createProgram(ProgramManager::Definition(GL_VERTEX_SHADER, "scene.vert.glsl"),
+                                                        ProgramManager::Definition(GL_GEOMETRY_SHADER, "scene.geo.glsl"),
+                                                        ProgramManager::Definition(GL_FRAGMENT_SHADER, "scene.frag.glsl"));
 
   cmdlist.state.programChangeID++;
 
@@ -313,16 +311,16 @@ bool Sample::initScene()
 
   {
     // pattern texture
-    int                                         size = 32;
-    std::vector<nvmath::vector4<unsigned char>> texels;
+    int                                                    size = 32;
+    std::vector<glm::vec<4, unsigned char, glm::defaultp>> texels;
     texels.resize(size * size);
 
     for(int y = 0; y < size; y++)
     {
       for(int x = 0; x < size; x++)
       {
-        int                            pos = x + y * size;
-        nvmath::vector4<unsigned char> texel;
+        int                                       pos = x + y * size;
+        glm::vec<4, unsigned char, glm::defaultp> texel;
 
         texel[0] = ((x + y ^ 127) & 15) * 17;
         texel[1] = ((x + y ^ 127) & 31) * 8;
@@ -405,8 +403,9 @@ bool Sample::initScene()
 
       float angle = nvh::frand() * 180.f;
 
-      ubodata.worldMatrix = nvmath::translation_mat4(pos) * nvmath::scale_mat4(vec3(scale)) * nvmath::rotation_mat4_x(angle);
-      ubodata.worldMatrixIT = nvmath::transpose(nvmath::invert(ubodata.worldMatrix));
+      ubodata.worldMatrix = glm::translate(glm::mat4(1.f), pos) * glm::scale(glm::mat4(1.f), vec3(scale))
+                            * glm::rotate(glm::mat4(1.f), angle, glm::vec3(1, 0, 0));
+      ubodata.worldMatrixIT = glm::transpose(glm::inverse(ubodata.worldMatrix));
       ubodata.texScale.x    = rand() % 2 + 1.0f;
       ubodata.texScale.y    = rand() % 2 + 1.0f;
       ubodata.color         = vec4(nvh::frand(), nvh::frand(), nvh::frand(), 1.0f);
@@ -686,15 +685,15 @@ bool Sample::initCommandList()
   }
   else
   {
-    cmdlist.stateobj_draw = 1;
+    cmdlist.stateobj_draw     = 1;
     cmdlist.stateobj_draw_geo = 2;
   }
 
 
   // create actual token stream from our scene
   {
-    NVTokenSequence& seq = cmdlist.tokenSequence;
-    std::string& stream = cmdlist.tokenData;
+    NVTokenSequence& seq    = cmdlist.tokenSequence;
+    std::string&     stream = cmdlist.tokenData;
 
     size_t offset = 0;
 
@@ -912,8 +911,8 @@ bool Sample::begin()
     return false;
   }
 
-  m_bindlessVboUbo = has_GL_NV_vertex_buffer_unified_memory
-                     && m_contextWindow.extensionSupported("GL_NV_uniform_buffer_unified_memory");
+  m_bindlessVboUbo =
+      has_GL_NV_vertex_buffer_unified_memory && m_contextWindow.extensionSupported("GL_NV_uniform_buffer_unified_memory");
 
   bool validated(true);
 
@@ -946,8 +945,8 @@ bool Sample::begin()
 
   m_control.m_sceneOrbit     = vec3(0.0f);
   m_control.m_sceneDimension = float(grid) * 0.2f;
-  m_control.m_viewMatrix     = nvmath::look_at(m_control.m_sceneOrbit - vec3(0, 0, -m_control.m_sceneDimension),
-                                           m_control.m_sceneOrbit, vec3(0, 1, 0));
+  m_control.m_viewMatrix =
+      glm::lookAt(m_control.m_sceneOrbit - vec3(0, 0, -m_control.m_sceneDimension), m_control.m_sceneOrbit, vec3(0, 1, 0));
 
   m_sceneUbo.shrinkFactor = 0.5f;
 
@@ -983,8 +982,8 @@ void Sample::think(double time)
 
   processUI(time);
 
-  m_control.processActions(m_windowState.m_winSize,
-                           nvmath::vec2f(m_windowState.m_mouseCurrent[0], m_windowState.m_mouseCurrent[1]),
+  m_control.processActions({m_windowState.m_winSize[0], m_windowState.m_winSize[1]},
+                           glm::vec2(m_windowState.m_mouseCurrent[0], m_windowState.m_mouseCurrent[1]),
                            m_windowState.m_mouseButtonFlags, m_windowState.m_mouseWheel);
 
   int width  = m_windowState.m_winSize[0];
@@ -1005,14 +1004,14 @@ void Sample::think(double time)
     NV_PROFILE_GL_SECTION("Setup");
     m_sceneUbo.viewport = uvec2(width, height);
 
-    nvmath::mat4 projection = nvmath::perspective(45.f, float(width) / float(height), 0.1f, 1000.0f);
-    nvmath::mat4 view       = m_control.m_viewMatrix;
+    glm::mat4 projection = glm::perspectiveRH_ZO(45.f, float(width) / float(height), 0.1f, 1000.0f);
+    glm::mat4 view       = m_control.m_viewMatrix;
 
     m_sceneUbo.viewProjMatrix  = projection * view;
-    m_sceneUbo.viewProjMatrixI = nvmath::invert(m_sceneUbo.viewProjMatrix);
+    m_sceneUbo.viewProjMatrixI = glm::inverse(m_sceneUbo.viewProjMatrix);
     m_sceneUbo.viewMatrix      = view;
-    m_sceneUbo.viewMatrixI     = nvmath::invert(view);
-    m_sceneUbo.viewMatrixIT    = nvmath::transpose(m_sceneUbo.viewMatrixI);
+    m_sceneUbo.viewMatrixI     = glm::inverse(view);
+    m_sceneUbo.viewMatrixIT    = glm::transpose(m_sceneUbo.viewMatrixI);
     m_sceneUbo.wLightPos       = vec4(m_tweak.lightDir * float(grid), 1.0f);
     m_sceneUbo.time            = float(time) * m_tweak.animate;
 
@@ -1021,7 +1020,7 @@ void Sample::think(double time)
     glBindFramebuffer(GL_FRAMEBUFFER, fbos.scene);
     glViewport(0, 0, width, height);
 
-    nvmath::vec4 bgColor(0.2, 0.2, 0.2, 0.0);
+    glm::vec4 bgColor(0.2, 0.2, 0.2, 0.0);
     glClearColor(bgColor.x, bgColor.y, bgColor.z, bgColor.w);
     glClearDepth(1.0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
